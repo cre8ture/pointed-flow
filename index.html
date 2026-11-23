@@ -661,6 +661,8 @@
       // Offscreen persistent dense graph layer (matches viewport dimensions)
       const denseCanvas = document.createElement('canvas');
       const denseCtx = denseCanvas.getContext('2d');
+      const denseTintCanvas = document.createElement('canvas');
+      const denseTintCtx = denseTintCanvas.getContext('2d');
 
       // 4x4 Bayer ordered dithering matrix
       const BAYER_4X4 = [
@@ -762,6 +764,96 @@
           inkUltraFaint: 'rgba(236, 236, 236, 0.10)',
           labelBg: 'rgba(8, 8, 8, 0.80)',
           invInk: '#080808'
+        };
+      }
+
+      // Intermittent random chromatic graph flash state
+      const GRAPH_FLASH_PALETTES = {
+        darkroom: [
+          [0, 232, 255],   // Electric Cyan
+          [255, 74, 58],   // Signal Vermilion
+          [204, 255, 51],  // Acid Chartreuse
+          [255, 56, 176],  // Laser Magenta
+          [255, 184, 46],  // Phosphor Amber
+          [146, 125, 255], // Ultramarine Violet
+          [54, 245, 168],  // Bioluminescent Mint
+          [77, 158, 255]   // Cobalt Glow
+        ],
+        paper: [
+          [0, 82, 214],    // Cobalt Blue
+          [214, 40, 28],   // Vermilion Red
+          [0, 138, 86],    // Viridian Green
+          [196, 18, 118],  // Magenta Rose
+          [204, 98, 0],    // Burnt Ochre
+          [88, 48, 204],   // Indigo Violet
+          [0, 128, 148],   // Deep Teal
+          [178, 24, 58]    // Archival Crimson
+        ]
+      };
+
+      const graphFlash = {
+        active: false,
+        startAt: 0,
+        duration: 0,
+        nextFlashAt: performance.now() + 1800 + Math.random() * 2700,
+        colorIdx: -1
+      };
+
+      function getGraphFlashState(baseColors, now) {
+        const palette = state.theme === 'paper'
+          ? GRAPH_FLASH_PALETTES.paper
+          : GRAPH_FLASH_PALETTES.darkroom;
+
+        if (!graphFlash.active && now >= graphFlash.nextFlashAt) {
+          let nextIdx = Math.floor(Math.random() * palette.length);
+          if (nextIdx === graphFlash.colorIdx) {
+            nextIdx = (nextIdx + 1 + Math.floor(Math.random() * (palette.length - 1))) % palette.length;
+          }
+          graphFlash.colorIdx = nextIdx;
+          graphFlash.active = true;
+          graphFlash.startAt = now;
+          // Random flash duration between 0.35s and 2.4s
+          graphFlash.duration = 350 + Math.random() * 2050;
+        }
+
+        if (!graphFlash.active) {
+          return { colors: baseColors, intensity: 0 };
+        }
+
+        const elapsed = now - graphFlash.startAt;
+        if (elapsed >= graphFlash.duration) {
+          graphFlash.active = false;
+          // Random interval between flashes: 2.2s to 10.0s
+          graphFlash.nextFlashAt = now + 2200 + Math.random() * 7800;
+          return { colors: baseColors, intensity: 0 };
+        }
+
+        const fadeIn = Math.min(70, graphFlash.duration * 0.2);
+        const fadeOut = Math.min(180, graphFlash.duration * 0.35);
+        let intensity = 1;
+        if (elapsed < fadeIn) {
+          intensity = elapsed / Math.max(1, fadeIn);
+        } else if (elapsed > graphFlash.duration - fadeOut) {
+          intensity = (graphFlash.duration - elapsed) / Math.max(1, fadeOut);
+        }
+        intensity = Math.max(0, Math.min(1, intensity));
+
+        const isPaper = state.theme === 'paper';
+        const baseRgb = isPaper ? [14, 14, 14] : [236, 236, 236];
+        const targetRgb = palette[graphFlash.colorIdx % palette.length];
+        const r = Math.round(baseRgb[0] + (targetRgb[0] - baseRgb[0]) * intensity);
+        const g = Math.round(baseRgb[1] + (targetRgb[1] - baseRgb[1]) * intensity);
+        const b = Math.round(baseRgb[2] + (targetRgb[2] - baseRgb[2]) * intensity);
+
+        return {
+          intensity,
+          colors: {
+            ...baseColors,
+            ink: `rgb(${r}, ${g}, ${b})`,
+            inkDim: `rgba(${r}, ${g}, ${b}, ${isPaper ? 0.72 : 0.72})`,
+            inkFaint: `rgba(${r}, ${g}, ${b}, ${isPaper ? 0.34 : 0.32})`,
+            inkUltraFaint: `rgba(${r}, ${g}, ${b}, ${isPaper ? 0.16 : 0.14})`
+          }
         };
       }
 
@@ -2481,12 +2573,12 @@
       /* -----------------------------------------------------------------------
          9. BOTTOM DERIVATIVE OSCILLOSCOPE RENDERER
          ----------------------------------------------------------------------- */
-      function renderOscilloscope() {
+      function renderOscilloscope(colors) {
         const w = scopeCanvas.clientWidth;
         const h = scopeCanvas.clientHeight;
         if (w <= 0 || h <= 0) return;
 
-        const c = getThemeColors();
+        const c = colors || getThemeColors();
         scopeCtx.clearRect(0, 0, w, h);
 
         // Center hairline reference
@@ -2580,6 +2672,8 @@
 
         // 3. Render Main Viewport Canvas
         const c = getThemeColors();
+        const flash = getGraphFlashState(c, now);
+        const graphColors = flash.colors;
         const vw = state.viewport.w;
         const vh = state.viewport.h;
         mainCtx.fillStyle = c.bg;
@@ -2605,16 +2699,31 @@
 
         // Draw accumulated dense graph layer (in HYBRID or DENSE GRAPH mode)
         if (state.viewMode === 'hybrid' || state.viewMode === 'dense') {
-          mainCtx.drawImage(denseCanvas, 0, 0, vw, vh);
+          if (flash.intensity > 0.01 && denseCanvas.width > 0 && denseCanvas.height > 0) {
+            if (denseTintCanvas.width !== denseCanvas.width || denseTintCanvas.height !== denseCanvas.height) {
+              denseTintCanvas.width = denseCanvas.width;
+              denseTintCanvas.height = denseCanvas.height;
+            }
+            denseTintCtx.globalCompositeOperation = 'source-over';
+            denseTintCtx.clearRect(0, 0, denseTintCanvas.width, denseTintCanvas.height);
+            denseTintCtx.drawImage(denseCanvas, 0, 0);
+            denseTintCtx.globalCompositeOperation = 'source-in';
+            denseTintCtx.fillStyle = graphColors.ink;
+            denseTintCtx.fillRect(0, 0, denseTintCanvas.width, denseTintCanvas.height);
+            denseTintCtx.globalCompositeOperation = 'source-over';
+            mainCtx.drawImage(denseTintCanvas, 0, 0, vw, vh);
+          } else {
+            mainCtx.drawImage(denseCanvas, 0, 0, vw, vh);
+          }
         }
 
         // Draw live tracked keypoints, ROI squares, angular edges & annotations
         if (state.viewMode === 'live' || state.viewMode === 'color' || state.viewMode === 'hybrid' || denseData.totalPoints === 0) {
-          renderGraphOverlay(mainCtx, c);
+          renderGraphOverlay(mainCtx, graphColors);
         }
 
         // 4. Render Bottom Oscilloscope
-        renderOscilloscope();
+        renderOscilloscope(graphColors);
       }
 
       /* -----------------------------------------------------------------------
