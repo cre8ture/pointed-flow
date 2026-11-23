@@ -318,6 +318,69 @@
       line-height: 1.5;
       font-variant-numeric: tabular-nums;
     }
+
+    /* Interactive Project Guide / ? Info Modal */
+    #infoModal {
+      background-color: rgba(4, 4, 4, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    [data-theme="paper"] #infoModal {
+      background-color: rgba(235, 235, 229, 0.80);
+    }
+    #infoModalCard {
+      background-color: var(--bg-panel-solid);
+      border: 1px solid var(--border-strong);
+      color: var(--ink);
+      user-select: text;
+    }
+    .guide-section {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-top: 14px;
+    }
+    .guide-fig-card {
+      border: 1px solid var(--border);
+      background-color: rgba(128, 128, 128, 0.05);
+      overflow: hidden;
+      border-radius: 2px;
+    }
+    .guide-fig-img-wrap {
+      position: relative;
+      background-color: #080808;
+      border-bottom: 1px solid var(--border);
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+    }
+    .guide-fig-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .guide-fig-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background-color: rgba(8, 8, 8, 0.86);
+      color: #ececec;
+      border: 1px solid rgba(236, 236, 236, 0.35);
+      padding: 2px 6px;
+      font-size: 8.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .guide-tag {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      color: var(--ink);
+      background-color: rgba(128, 128, 128, 0.09);
+    }
   </style>
 </head>
 <body>
@@ -378,6 +441,7 @@
           <button id="viewDense" class="hud-btn" data-view="dense" title="Pure monochromatic dense vector graph">DENSE</button>
           <button id="btnAudio" class="hud-btn" title="Enable real-time algorithmic audio score based on angles & derivatives">AUDIO: OFF</button>
           <button id="btnMathDrawer" class="hud-btn" aria-expanded="false" title="Expand real-time mathematical computations & algorithms">MATH [+]</button>
+          <button id="btnInfoModal" class="hud-btn font-semibold px-2" aria-haspopup="dialog" aria-controls="infoModal" aria-expanded="false" title="About DIFFERENTIAL_FLOW, the math, visual examples & how to use it">?</button>
         </div>
 
         <span class="hidden sm:inline-block h-3 w-px bg-[var(--border)]"></span>
@@ -472,6 +536,201 @@
       <div class="math-kv"><span class="opacity-70">FILTER CUTOFF / PAN</span><span id="mathAudioCutoff">440 Hz // 0.00</span></div>
     </div>
   </aside>
+
+  <!-- =========================================================================
+       INTERACTIVE PROJECT GUIDE, MATH EXPLAINER & ANNOTATED VISUALS (? MODAL)
+       ========================================================================= -->
+  <div id="infoModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+    <div id="infoModalCard" class="w-full max-w-[820px] max-h-[88vh] overflow-y-auto rounded-sm shadow-2xl p-4 sm:p-5">
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
+        <div class="flex items-center gap-2.5">
+          <svg width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="shrink-0">
+            <path d="M31 28 C25 14, 11 11, 10 21 C9 29, 18 33, 30 33 Z" fill="currentColor"/>
+            <path d="M33 28 C39 14, 53 11, 54 21 C55 29, 46 33, 34 33 Z" fill="currentColor"/>
+            <path d="M30 35 C21 35, 13 41, 16 49 C19 54, 28 50, 31 41 Z" fill="currentColor" fill-opacity="0.82"/>
+            <path d="M34 35 C43 35, 51 41, 48 49 C45 54, 36 50, 33 41 Z" fill="currentColor" fill-opacity="0.82"/>
+            <ellipse cx="32" cy="34" rx="2.3" ry="11" fill="currentColor"/>
+            <path d="M30.8 23 C28.5 16, 25 13, 22.5 12 M33.2 23 C35.5 16, 39 13, 41.5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <h2 id="infoModalTitle" class="text-[12px] sm:text-[13px] font-semibold tracking-widest uppercase">
+              DIFFERENTIAL_FLOW // &part;&theta;/&part;t &mdash; FIELD GUIDE
+            </h2>
+            <div class="text-[9.5px] opacity-65 uppercase tracking-wider mt-0.5">
+              REAL-TIME OPTICAL FLOW, KINEMATIC GEOMETRY &amp; ALGORITHMIC AUDIO &middot; BY KAI KLEINBARD
+            </div>
+          </div>
+        </div>
+        <button id="btnCloseInfo" class="hud-btn shrink-0 px-2 py-1" aria-label="Close guide">CLOSE [×]</button>
+      </div>
+
+      <!-- 01. Overview -->
+      <section class="mt-3.5">
+        <div class="text-[10px] font-semibold tracking-widest uppercase mb-1.5">01 // ABOUT THIS INSTRUMENT</div>
+        <p class="text-[11px] leading-relaxed text-[var(--ink-dim)]">
+          <strong class="text-[var(--ink)] font-medium">DIFFERENTIAL_FLOW</strong> is a browser-native computer vision and generative audiovisual instrument. Without any backend server or external CV library, it detects high-contrast motion features at 60 FPS across procedural biological/mechanical specimens, your own uploaded videos, or a live webcam feed—converting raw pixel movement into a living angular geometry graph, localized pixel-shader cutouts, and a responsive FM audio score.
+        </p>
+      </section>
+
+      <!-- 02. Annotated Visual Guide -->
+      <section class="guide-section">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[10px] font-semibold tracking-widest uppercase">02 // VISUAL FIELD GUIDE (WHAT YOU ARE SEEING)</div>
+          <span class="text-[9px] opacity-55 uppercase">4 ANNOTATED SPECIMENS</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- FIG 01 -->
+          <figure class="guide-fig-card">
+            <div class="guide-fig-img-wrap">
+              <img src="og-preview.jpg" alt="Butterfly specimen with optical flow keypoints, angular edges, and ROI tracking boxes" loading="lazy" />
+              <span class="guide-fig-badge">[FIG.01] OPTICAL FLOW</span>
+            </div>
+            <figcaption class="p-2.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wider">KEYPOINTS &amp; ANGULAR GRAPH</div>
+              <p class="text-[10px] leading-relaxed text-[var(--ink-dim)] mt-1">
+                High-contrast wing features are automatically locked as tracking nodes. Nearby nodes connect with proximity edges measuring angle <span class="text-[var(--ink)]">&theta;</span> and angular velocity <span class="text-[var(--ink)]">&omega; = d&theta;/dt</span>, drawn as subtle sweep arcs around fast-rotating joints.
+              </p>
+            </figcaption>
+          </figure>
+
+          <!-- FIG 02 -->
+          <figure class="guide-fig-card">
+            <div class="guide-fig-img-wrap">
+              <img src="guide-roi-flash.jpg" alt="Localized ROI boxes showing X-Ray, Bitmap, Mosaic, and Halftone effects connected by a cyan chromatic flash graph" loading="lazy" />
+              <span class="guide-fig-badge">[FIG.02] ROI + COLOR FLASH</span>
+            </div>
+            <figcaption class="p-2.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wider">ROI PIXEL SHADERS &amp; CHROMATIC PULSES</div>
+              <p class="text-[10px] leading-relaxed text-[var(--ink-dim)] mt-1">
+                Each corner-handled square isolates a Region of Interest (<span class="text-[var(--ink)]">X-RAY</span>, <span class="text-[var(--ink)]">BITMAP</span> Bayer dither, <span class="text-[var(--ink)]">MOSAIC</span>, or <span class="text-[var(--ink)]">HALFTONE</span>) scaled dynamically by speed. At randomized intervals, the graph briefly flashes into a new high-contrast accent color before decaying back to monochrome.
+              </p>
+            </figcaption>
+          </figure>
+
+          <!-- FIG 03 -->
+          <figure class="guide-fig-card">
+            <div class="guide-fig-img-wrap">
+              <img src="guide-dense-graph.jpg" alt="Long-exposure dense kinematic trajectory web with acceleration stamps and FIG.01 leader lines" loading="lazy" />
+              <span class="guide-fig-badge">[FIG.03] DENSE GRAPH</span>
+            </div>
+            <figcaption class="p-2.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wider">LONG-EXPOSURE RECORDING &amp; EXPORTS</div>
+              <p class="text-[10px] leading-relaxed text-[var(--ink-dim)] mt-1">
+                Press <span class="guide-tag">REC DENSE GRAPH</span> inside the bottom dock to accumulate trajectories, triangular webs, and corner-handled acceleration stamps into a plotter-style drawing—then view it in <span class="guide-tag">HYBRID</span> / <span class="guide-tag">DENSE</span> mode or export crisp <span class="guide-tag">SVG</span>, <span class="guide-tag">PNG</span>, <span class="guide-tag">WEBM</span>, or <span class="guide-tag">JSON</span>.
+              </p>
+            </figcaption>
+          </figure>
+
+          <!-- FIG 04 -->
+          <figure class="guide-fig-card">
+            <div class="guide-fig-img-wrap">
+              <img src="guide-pendulum-scope.jpg" alt="Double orbital pendulum specimen tracked with reticles above live kinematic oscilloscope waveforms" loading="lazy" />
+              <span class="guide-fig-badge">[FIG.04] SCOPE + AUDIO</span>
+            </div>
+            <figcaption class="p-2.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wider">PENDULUM CHAOS, SCOPE &amp; SONIFICATION</div>
+              <p class="text-[10px] leading-relaxed text-[var(--ink-dim)] mt-1">
+                Switch to <span class="guide-tag">DEMO_B</span> to track a coupled double pendulum. The bottom <span class="text-[var(--ink)]">KINEMATIC SCOPE</span> plots real-time velocity, angular speed, and jerk waveforms, while <span class="guide-tag">AUDIO</span> synthesizes polyphonic FM notes driven directly by motion and visual texture.
+              </p>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 03. The Math -->
+      <section class="guide-section">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[10px] font-semibold tracking-widest uppercase">03 // THE MATH UNDER THE HOOD</div>
+          <span class="text-[9px] opacity-55 uppercase">OPEN MATH [+] FOR LIVE VALUES</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[9.5px] font-semibold uppercase tracking-wider">A. SHI-TOMASI CORNER DETECTION</div>
+            <div class="math-formula">
+              M = &Sigma; [I<sub>x</sub>&sup2; &nbsp; I<sub>x</sub>I<sub>y</sub> ; I<sub>x</sub>I<sub>y</sub> &nbsp; I<sub>y</sub>&sup2;]<br/>
+              &lambda;<sub>min</sub> = &frac12;(tr(M) &minus; &radic;((I<sub>x</sub>&sup2;&minus;I<sub>y</sub>&sup2;)&sup2; + 4I<sub>x</sub>I<sub>y</sub>&sup2;))
+            </div>
+            <p class="text-[10px] leading-relaxed text-[var(--ink-dim)]">
+              Measures intensity gradients in both X and Y. High <span class="text-[var(--ink)]">&lambda;<sub>min</sub></span> identifies sharp two-dimensional corners (wingtips, eyespots, joints) that won't slip along flat edges.
+            </p>
+          </div>
+
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[9.5px] font-semibold uppercase tracking-wider">B. LUCAS-KANADE OPTICAL FLOW</div>
+            <div class="math-formula">
+              [u, v]<sup>T</sup> = &minus;(A<sup>T</sup>A)<sup>&minus;1</sup> A<sup>T</sup>b &nbsp; (9&times;9 patch, 5 iters)
+            </div>
+            <p class="text-[10px] leading-relaxed text-[var(--ink-dim)]">
+              Solves least-squares brightness constancy around each tracked point iteratively across frames, recovering sub-pixel displacement <span class="text-[var(--ink)]">(u, v)</span> with photometric error checks to prune lost points.
+            </p>
+          </div>
+
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[9.5px] font-semibold uppercase tracking-wider">C. KINEMATIC DERIVATIVES</div>
+            <div class="math-formula">
+              v = dp/dt &nbsp;|&nbsp; a = dv/dt &nbsp;|&nbsp; j = da/dt
+            </div>
+            <p class="text-[10px] leading-relaxed text-[var(--ink-dim)]">
+              Differentiates each keypoint's trajectory to compute instantaneous speed <span class="text-[var(--ink)]">v</span>, acceleration <span class="text-[var(--ink)]">a</span> (which drives leader lines &amp; dense stamps), and jerk <span class="text-[var(--ink)]">j</span> (sudden bursts of force).
+            </p>
+          </div>
+
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[9.5px] font-semibold uppercase tracking-wider">D. ANGULAR GRAPH &amp; PHASE COHERENCE</div>
+            <div class="math-formula">
+              &theta;<sub>ij</sub> = atan2(&Delta;y, &Delta;x) &nbsp;|&nbsp; &omega;<sub>ij</sub> = d&theta;<sub>ij</sub>/dt<br/>
+              R = (1/M) |&Sigma; exp(i&middot;&theta;<sub>ij</sub>)| &isin; [0, 1]
+            </div>
+            <p class="text-[10px] leading-relaxed text-[var(--ink-dim)]">
+              Tracks how fast edges rotate (<span class="text-[var(--ink)]">&omega;</span>) and computes the Kuramoto order parameter <span class="text-[var(--ink)]">R</span>: values near 1 indicate aligned collective motion, while values near 0 indicate turbulent dispersion.
+            </p>
+          </div>
+
+          <div class="border border-[var(--border)] p-2.5 rounded-sm sm:col-span-2">
+            <div class="text-[9.5px] font-semibold uppercase tracking-wider">E. IMAGE-TO-AUDIO FINGERPRINT (TONE.JS)</div>
+            <div class="math-formula">
+              &mu;<sub>L</sub> (Luminance) &rarr; Musical Scale &amp; Root &nbsp;|&nbsp; &sigma;<sub>L</sub> (Contrast) &rarr; FM Mod Index &nbsp;|&nbsp; E<sub>D</sub> (Edge Density) &rarr; Reverb Decay &nbsp;|&nbsp; S<sub>x</sub> (Symmetry) &rarr; Harmonicity
+            </div>
+            <p class="text-[10px] leading-relaxed text-[var(--ink-dim)]">
+              Every frame extracts an optical fingerprint from the live imagery so each video or webcam scene automatically creates its own sonic signature—with note pitch, stereo pan, and filter cutoff modulated continuously by node velocity and angular speed.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04. How To Use It -->
+      <section class="guide-section">
+        <div class="text-[10px] font-semibold tracking-widest uppercase mb-2">04 // HOW TO USE IT</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] leading-relaxed text-[var(--ink-dim)]">
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[var(--ink)] font-semibold uppercase mb-1">1. PIN CUSTOM KEYPOINTS</div>
+            Click or tap anywhere directly on the canvas to manually drop a tracked anchor (<span class="text-[var(--ink)]">PIN_01*</span>). Drag &amp; drop any <span class="text-[var(--ink)]">MP4 / WEBM / MOV</span> video file onto the window at any time.
+          </div>
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[var(--ink)] font-semibold uppercase mb-1">2. SWITCH SOURCES &amp; VIEW MODES</div>
+            Explore <span class="guide-tag">DEMO_A</span>, <span class="guide-tag">DEMO_B</span>, <span class="guide-tag">UPLOAD</span>, or <span class="guide-tag">WEBCAM</span>. Flip between <span class="guide-tag">LIVE</span>, <span class="guide-tag">COLOR</span>, <span class="guide-tag">HYBRID</span>, <span class="guide-tag">DENSE</span>, and <span class="guide-tag">LIGHT</span> / <span class="guide-tag">DARK</span> paper modes.
+          </div>
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[var(--ink)] font-semibold uppercase mb-1">3. LISTEN &amp; INSPECT LIVE MATH</div>
+            Toggle <span class="guide-tag">AUDIO: OFF</span> to start the real-time generative FM synthesizer, and click <span class="guide-tag">MATH [+]</span> to watch live eigenvalues, flow residuals, phase coherence, and active edge tables update every frame.
+          </div>
+          <div class="border border-[var(--border)] p-2.5 rounded-sm">
+            <div class="text-[var(--ink)] font-semibold uppercase mb-1">4. RECORD, TUNE &amp; EXPORT</div>
+            Click <span class="guide-tag">HUD [+]</span> (bottom-left) to record long-exposure graphs (<span class="guide-tag">REC DENSE GRAPH</span>), tune sliders in <span class="guide-tag">PARAMS [+]</span>, or export your session as <span class="guide-tag">PNG</span>, vector <span class="guide-tag">SVG</span>, <span class="guide-tag">WEBM</span>, or <span class="guide-tag">JSON</span>.
+          </div>
+        </div>
+      </section>
+
+      <!-- Modal Footer -->
+      <div class="guide-section flex flex-wrap items-center justify-between gap-2 text-[9.5px] uppercase tracking-wider opacity-70">
+        <span>PRESS ESC OR CLICK OUTSIDE TO RETURN TO VIEWPORT</span>
+        <span>CREATED BY KAI KLEINBARD &middot; <a href="https://github.com/cre8ture/pointed-flow" target="_blank" rel="noopener noreferrer" class="underline hover:opacity-100">GITHUB REPO</a></span>
+      </div>
+    </div>
+  </div>
 
   <!-- =========================================================================
        BOTTOM DOCK: MINIMIZED BY DEFAULT (TOGGLEABLE CONTROLS + OSCILLOSCOPE)
@@ -2933,6 +3192,32 @@
       }
       btnMathDrawer.addEventListener('click', () => setMathDrawerOpen(!state.mathOpen));
       document.getElementById('btnCloseMath').addEventListener('click', () => setMathDrawerOpen(false));
+
+      // Interactive Project Guide / ? Info Modal toggle
+      const btnInfoModal = document.getElementById('btnInfoModal');
+      const infoModal = document.getElementById('infoModal');
+      const btnCloseInfo = document.getElementById('btnCloseInfo');
+      let infoModalOpen = false;
+      function setInfoModalOpen(open) {
+        infoModalOpen = open;
+        infoModal.classList.toggle('hidden', !open);
+        btnInfoModal.classList.toggle('active', open);
+        btnInfoModal.setAttribute('aria-expanded', String(open));
+        if (open) {
+          btnCloseInfo.focus();
+        }
+      }
+      btnInfoModal.addEventListener('click', () => setInfoModalOpen(!infoModalOpen));
+      btnCloseInfo.addEventListener('click', () => setInfoModalOpen(false));
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) setInfoModalOpen(false);
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (infoModalOpen) setInfoModalOpen(false);
+          else if (state.mathOpen) setMathDrawerOpen(false);
+        }
+      });
 
       // Recording & Clear buttons
       document.getElementById('btnRec').addEventListener('click', toggleRecording);
