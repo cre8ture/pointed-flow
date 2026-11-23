@@ -1,0 +1,2988 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="darkroom">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DIFFERENTIAL_FLOW // ∂θ/∂t — Kai Kleinbard</title>
+  <meta name="description" content="Real-time optical flow, Shi-Tomasi corner tracking, kinematic graph derivatives (v, a, j, ∂θ/∂t), and algorithmic audio synthesis. Created by Kai Kleinbard." />
+  <meta name="author" content="Kai Kleinbard" />
+  <meta name="creator" content="Kai Kleinbard" />
+  <meta name="copyright" content="Kai Kleinbard" />
+  <meta name="keywords" content="optical flow, Shi-Tomasi, Lucas-Kanade, kinematic graph, differential flow, computer vision, algorithmic audio, interactive art, Kai Kleinbard" />
+  <meta name="theme-color" content="#080808" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="canonical" href="https://cre8ture.github.io/pointed-flow/" />
+
+  <!-- Butterfly Icons & Web Manifest -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="manifest" href="site.webmanifest" />
+
+  <!-- Open Graph / Social & Embed Preview Metadata -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="DIFFERENTIAL_FLOW // ∂θ/∂t" />
+  <meta property="og:title" content="DIFFERENTIAL_FLOW // ∂θ/∂t" />
+  <meta property="og:description" content="Real-time optical flow, kinematic graph derivatives, and algorithmic audio synthesis. By Kai Kleinbard." />
+  <meta property="og:url" content="https://cre8ture.github.io/pointed-flow/" />
+  <meta property="og:image" content="https://cre8ture.github.io/pointed-flow/og-preview.jpg" />
+  <meta property="og:image:secure_url" content="https://cre8ture.github.io/pointed-flow/og-preview.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1376" />
+  <meta property="og:image:height" content="768" />
+  <meta property="og:image:alt" content="DIFFERENTIAL_FLOW // ∂θ/∂t — monochrome butterfly specimen with optical flow keypoints, kinematic graph edges, and ROI tracking boxes, by Kai Kleinbard" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter / X & Rich Link Card Metadata -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DIFFERENTIAL_FLOW // ∂θ/∂t" />
+  <meta name="twitter:description" content="Real-time optical flow, kinematic graph derivatives, and algorithmic audio synthesis. By Kai Kleinbard." />
+  <meta name="twitter:image" content="https://cre8ture.github.io/pointed-flow/og-preview.jpg" />
+  <meta name="twitter:image:alt" content="DIFFERENTIAL_FLOW // ∂θ/∂t — monochrome butterfly specimen with optical flow tracking by Kai Kleinbard" />
+
+  <!-- Structured Data Attribution -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DIFFERENTIAL_FLOW // ∂θ/∂t",
+      "description": "Real-time optical flow, Shi-Tomasi corner tracking, kinematic graph derivatives, and algorithmic audio synthesis.",
+      "url": "https://cre8ture.github.io/pointed-flow/",
+      "image": "https://cre8ture.github.io/pointed-flow/og-preview.jpg",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "author": {
+        "@type": "Person",
+        "name": "Kai Kleinbard"
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Kai Kleinbard"
+      }
+    }
+  </script>
+  <!-- Tailwind CSS for responsive layout & utility classes -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tone.js for real-time algorithmic audio synthesis -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <!-- IBM Plex Mono for brutalist-scientific monospace typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================================================
+       MONOCHROMATIC THEME TOKENS (DARKROOM vs SPECIMEN PAPER)
+       ========================================================================= */
+    :root,
+    [data-theme="darkroom"] {
+      --bg: #080808;
+      --bg-panel: rgba(10, 10, 10, 0.88);
+      --bg-panel-solid: #101010;
+      --ink: #ececec;
+      --ink-dim: #9a9a9a;
+      --ink-faint: #4a4a4a;
+      --border: rgba(236, 236, 236, 0.28);
+      --border-strong: rgba(236, 236, 236, 0.72);
+      --active-bg: #ffffff;
+      --active-ink: #050505;
+      --active-glow: 0 0 0 1px #ffffff, 0 0 12px rgba(255, 255, 255, 0.28);
+      --grain-opacity: 0.055;
+    }
+
+    [data-theme="paper"] {
+      --bg: #f2f2ee;
+      --bg-panel: rgba(242, 242, 238, 0.92);
+      --bg-panel-solid: #e8e8e3;
+      --ink: #0e0e0e;
+      --ink-dim: #4c4c48;
+      --ink-faint: #92928c;
+      --border: rgba(14, 14, 14, 0.26);
+      --border-strong: rgba(14, 14, 14, 0.76);
+      --active-bg: #0e0e0e;
+      --active-ink: #f5f5f1;
+      --active-glow: 0 0 0 1px #0e0e0e;
+      --grain-opacity: 0.065;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      user-select: none;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Full-bleed primary viewport canvas */
+    #mainCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+      background-color: var(--bg);
+    }
+
+    /* Subtle archival film-grain overlay (non-blocking) */
+    #grainOverlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      opacity: var(--grain-opacity);
+      mix-blend-mode: overlay;
+    }
+
+    /* Brutalist technical UI chrome */
+    .hud-panel {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .hud-btn {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 10px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+      white-space: nowrap;
+      border-radius: 2px;
+    }
+
+    .hud-btn:not(.active):hover:not(:disabled) {
+      border-color: var(--border-strong);
+      background-color: rgba(128, 128, 128, 0.22);
+    }
+
+    .hud-btn.active,
+    .hud-btn.active:hover,
+    .hud-btn.active:focus {
+      background-color: var(--active-bg) !important;
+      color: var(--active-ink) !important;
+      border-color: var(--active-bg) !important;
+      box-shadow: var(--active-glow);
+      font-weight: 600;
+    }
+
+    .hud-btn:disabled {
+      opacity: 0.32;
+      cursor: not-allowed;
+    }
+
+    .hud-select {
+      background-color: var(--bg-panel-solid);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      padding: 3px 6px;
+      font-family: inherit;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      outline: none;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .hud-select:focus {
+      border-color: var(--border-strong);
+    }
+
+    /* Custom brutalist hairline range slider */
+    input[type="range"].hud-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 16px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"].hud-range::-webkit-slider-runnable-track {
+      height: 1px;
+      background: var(--border-strong);
+    }
+
+    input[type="range"].hud-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 8px;
+      height: 8px;
+      background: var(--ink);
+      border: 1px solid var(--bg);
+      margin-top: -3.5px;
+      border-radius: 0;
+    }
+
+    input[type="range"].hud-range::-moz-range-track {
+      height: 1px;
+      background: var(--border-strong);
+    }
+
+    input[type="range"].hud-range::-moz-range-thumb {
+      width: 8px;
+      height: 8px;
+      background: var(--ink);
+      border: 1px solid var(--bg);
+      border-radius: 0;
+    }
+
+    /* Recording pulse animation */
+    @keyframes recPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+    .rec-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background-color: currentColor;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .recording .rec-dot {
+      animation: recPulse 0.9s infinite;
+    }
+
+    /* Drag-and-drop overlay */
+    #dropOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg-panel);
+      border: 1px dashed var(--ink);
+      pointer-events: none;
+    }
+    #dropOverlay.visible {
+      display: flex;
+    }
+
+    /* Hide scrollbars on horizontal strips */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Expandable Real-Time Math Inspector Drawer */
+    #mathDrawer {
+      max-height: calc(100vh - 165px);
+      overflow-y: auto;
+    }
+    .math-block {
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+    .math-formula {
+      font-size: 9.5px;
+      line-height: 1.45;
+      color: var(--ink-dim);
+      background-color: rgba(128, 128, 128, 0.08);
+      border-left: 2px solid var(--border-strong);
+      padding: 4px 6px;
+      margin: 4px 0;
+      word-break: break-word;
+    }
+    .math-kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 9.5px;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <!-- =========================================================================
+       FULL-BLEED PRIMARY VIEWPORT CANVAS & GRAIN SUBSTRATE
+       ========================================================================= -->
+  <canvas id="mainCanvas" aria-label="Differential Flow Optical Tracking Viewport"></canvas>
+  <canvas id="grainOverlay" aria-hidden="true"></canvas>
+
+  <!-- Hidden video & file input elements -->
+  <video id="videoInput" playsinline muted loop crossorigin="anonymous" class="hidden"></video>
+  <input id="fileInput" type="file" accept="video/mp4,video/webm,video/quicktime,video/*" class="hidden" />
+
+  <!-- Drag & Drop Video Overlay -->
+  <div id="dropOverlay">
+    <div class="px-6 py-4 border border-current text-center uppercase tracking-widest">
+      <div class="text-xs font-medium">[ DROP SPECIMEN VIDEO FILE ]</div>
+      <div class="text-[10px] opacity-60 mt-1">MP4 // WEBM // MOV</div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MINIMAL TOP TELEMETRY HEADER
+       ========================================================================= -->
+  <header class="fixed top-0 left-0 right-0 z-20 pointer-events-none p-2 sm:p-3">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-2">
+      <!-- Left: Identity, Mobile-First Light/Dark Toggle & Source Selector -->
+      <div class="hud-panel pointer-events-auto flex flex-wrap items-center justify-between sm:justify-start gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-sm w-full sm:w-auto">
+        <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+          <span class="font-semibold tracking-widest text-[11px] sm:pr-2 sm:border-r sm:border-[var(--border)] inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="shrink-0">
+              <path d="M31 28 C25 14, 11 11, 10 21 C9 29, 18 33, 30 33 Z" fill="currentColor"/>
+              <path d="M33 28 C39 14, 53 11, 54 21 C55 29, 46 33, 34 33 Z" fill="currentColor"/>
+              <path d="M30 35 C21 35, 13 41, 16 49 C19 54, 28 50, 31 41 Z" fill="currentColor" fill-opacity="0.82"/>
+              <path d="M34 35 C43 35, 51 41, 48 49 C45 54, 36 50, 33 41 Z" fill="currentColor" fill-opacity="0.82"/>
+              <ellipse cx="32" cy="34" rx="2.3" ry="11" fill="currentColor"/>
+              <path d="M30.8 23 C28.5 16, 25 13, 22.5 12 M33.2 23 C35.5 16, 39 13, 41.5 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>DIFFERENTIAL_FLOW // &part;&theta;/&part;t</span>
+          </span>
+          <!-- Always-visible Light/Dark Mode toggle (pinned top-right on mobile) -->
+          <button id="themeToggle" class="hud-btn sm:order-last" title="Switch between Dark Mode and Light Mode">LIGHT</button>
+        </div>
+        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar w-full sm:w-auto pt-1 sm:pt-0 border-t border-[var(--border)] sm:border-t-0">
+          <button id="srcDemoA" class="hud-btn active" data-source="demoA" title="Procedural Moth/Wing Specimen">DEMO_A</button>
+          <button id="srcDemoB" class="hud-btn" data-source="demoB" title="Procedural Orbital Pendulum Specimen">DEMO_B</button>
+          <button id="srcUpload" class="hud-btn" data-source="upload" title="Upload Video File">UPLOAD</button>
+          <button id="srcWebcam" class="hud-btn" data-source="webcam" title="Live Webcam Feed">WEBCAM</button>
+        </div>
+      </div>
+
+      <!-- Right: View Modes, Audio, Math Inspector & Telemetry -->
+      <div class="hud-panel pointer-events-auto flex flex-wrap items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-sm w-full sm:w-auto">
+        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <button id="viewLive" class="hud-btn active" data-view="live" title="Monochromatic live video with kinematic graph">LIVE</button>
+          <button id="viewColor" class="hud-btn" data-view="color" title="Full-color video with kinematic graph & ROI effects">COLOR</button>
+          <button id="viewHybrid" class="hud-btn" data-view="hybrid" title="Monochromatic video blended with dense graph">HYBRID</button>
+          <button id="viewDense" class="hud-btn" data-view="dense" title="Pure monochromatic dense vector graph">DENSE</button>
+          <button id="btnAudio" class="hud-btn" title="Enable real-time algorithmic audio score based on angles & derivatives">AUDIO: OFF</button>
+          <button id="btnMathDrawer" class="hud-btn" aria-expanded="false" title="Expand real-time mathematical computations & algorithms">MATH [+]</button>
+        </div>
+
+        <span class="hidden sm:inline-block h-3 w-px bg-[var(--border)]"></span>
+
+        <!-- Real-Time Numeric Telemetry -->
+        <div class="flex items-center gap-2 text-[10px] tracking-wider opacity-85 tabular-nums">
+          <span id="statFig" class="hidden lg:inline font-medium">[FIG.01]</span>
+          <span>FPS:<strong id="statFps" class="font-medium ml-0.5">60</strong></span>
+          <span>PTS:<strong id="statNodes" class="font-medium ml-0.5">00</strong></span>
+          <span class="hidden xs:inline sm:inline">T:<strong id="statTime" class="font-medium ml-0.5">00:00.0</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inline non-blocking status toast (replaces alert/confirm) -->
+    <div id="statusToast" class="mt-2 inline-block hud-panel px-2.5 py-1 text-[10px] uppercase tracking-wider rounded-sm opacity-0 transition-opacity duration-200 pointer-events-none">
+      READY // CLICK CANVAS TO PIN KEYPOINT
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       EXPANDABLE REAL-TIME MATHEMATICAL COMPUTATIONS INSPECTOR
+       ========================================================================= -->
+  <aside id="mathDrawer" class="hidden fixed top-[58px] right-2 sm:right-3 z-20 w-[calc(100vw-16px)] sm:w-[340px] hud-panel rounded-sm p-3 pointer-events-auto">
+    <div class="flex items-center justify-between pb-1.5">
+      <div>
+        <div class="text-[10px] font-semibold tracking-widest uppercase">ALGORITHMIC TELEMETRY // MATH</div>
+        <div class="text-[8.5px] opacity-60 uppercase">REAL-TIME COMPUTATION INSPECTOR</div>
+      </div>
+      <button id="btnCloseMath" class="hud-btn px-1.5 py-0.5">CLOSE [×]</button>
+    </div>
+
+    <!-- 01. Shi-Tomasi Corner Detector -->
+    <div class="math-block">
+      <div class="text-[9.5px] font-semibold tracking-wider uppercase">01 // SHI-TOMASI CORNER RESPONSE</div>
+      <div class="math-formula">
+        M = Σ [Iₓ²  IₓIᵧ ; IₓIᵧ  Iᵧ²]<br/>
+        λ_min = ½ (tr(M) − √((Iₓ²−Iᵧ²)² + 4IₓIᵧ²))
+      </div>
+      <div class="math-kv"><span class="opacity-70">PEAK RESPONSE λ_min</span><span id="mathLambda">0.0</span></div>
+      <div class="math-kv"><span class="opacity-70">ACTIVE / TARGET NODES</span><span id="mathNodes">0 / 18</span></div>
+    </div>
+
+    <!-- 02. Lucas-Kanade Optical Flow -->
+    <div class="math-block">
+      <div class="text-[9.5px] font-semibold tracking-wider uppercase">02 // LUCAS-KANADE OPTICAL FLOW</div>
+      <div class="math-formula">
+        [u, v]ᵀ = −(AᵀA)⁻¹ Aᵀb  (9×9 patch, 5 iters)
+      </div>
+      <div class="math-kv"><span class="opacity-70">MEAN FLOW |u|</span><span id="mathFlow">0.00 px/f</span></div>
+      <div class="math-kv"><span class="opacity-70">PATCH PHOTOMETRIC MAE</span><span id="mathMae">0.00</span></div>
+    </div>
+
+    <!-- 03. Kinematics & Higher-Order Derivatives -->
+    <div class="math-block">
+      <div class="text-[9.5px] font-semibold tracking-wider uppercase">03 // KINEMATIC DERIVATIVES</div>
+      <div class="math-formula">
+        v = dp/dt  |  a = dv/dt  |  j = da/dt
+      </div>
+      <div class="math-kv"><span class="opacity-70">MEAN / PEAK VELOCITY v</span><span id="mathVel">0.0 / 0.0 px/s</span></div>
+      <div class="math-kv"><span class="opacity-70">MEAN / PEAK ACCEL a</span><span id="mathAcc">0 / 0 px/s²</span></div>
+      <div class="math-kv"><span class="opacity-70">MEAN JERK |j|</span><span id="mathJerk">0.0 px/s³</span></div>
+    </div>
+
+    <!-- 04. Graph Angular Geometry & Coherence -->
+    <div class="math-block">
+      <div class="text-[9.5px] font-semibold tracking-wider uppercase">04 // ANGULAR GRAPH &amp; COHERENCE</div>
+      <div class="math-formula">
+        θᵢⱼ = atan2(Δy, Δx)  |  ωᵢⱼ = dθᵢⱼ/dt  |  αᵢⱼ = dωᵢⱼ/dt<br/>
+        R = (1/M) |Σ exp(i·θᵢⱼ)|  ∈ [0, 1]
+      </div>
+      <div class="math-kv"><span class="opacity-70">MEAN DISTANCE d̄</span><span id="mathDist">0.0 px</span></div>
+      <div class="math-kv"><span class="opacity-70">MEAN ANGLE θ̄ / MAX |ω|</span><span id="mathOmega">0.0° / 0.0°/s</span></div>
+      <div class="math-kv"><span class="opacity-70">PHASE COHERENCE R</span><span id="mathCoherence">0.000</span></div>
+      <div class="mt-1.5 text-[8.5px] opacity-65 uppercase">TOP ACTIVE EDGES (d, θ, ω):</div>
+      <pre id="mathEdgeTable" class="text-[8.5px] leading-relaxed opacity-85 mt-0.5 overflow-x-auto tabular-nums">--</pre>
+    </div>
+
+    <!-- 05. Algorithmic Audio Score Mapping -->
+    <div class="math-block">
+      <div class="text-[9.5px] font-semibold tracking-wider uppercase">05 // IMAGE-TO-AUDIO FINGERPRINT</div>
+      <div class="math-formula">
+        μ_L (Lum) → Mode &amp; Key | σ_L (Contrast) → FM Mod Index<br/>
+        E_D (Edges) → Decay &amp; Space | S_x (Symmetry) → Harmonicity
+      </div>
+      <div class="math-kv"><span class="opacity-70">SYNTH ENGINE</span><span id="mathAudioState">STANDBY</span></div>
+      <div class="math-kv"><span class="opacity-70">ACTIVE MODE / KEY</span><span id="mathAudioMode">--</span></div>
+      <div class="math-kv"><span class="opacity-70">LUM μ_L / CONTRAST σ_L</span><span id="mathImageLum">0.00 / 0.00</span></div>
+      <div class="math-kv"><span class="opacity-70">TEXTURE E_D / SYM S_x</span><span id="mathImageTex">0.00 / 0.00</span></div>
+      <div class="math-kv"><span class="opacity-70">FM HARM / MOD INDEX</span><span id="mathAudioFm">2.00 / 1.80</span></div>
+      <div class="math-kv"><span class="opacity-70">LAST TRIGGERED NOTE</span><span id="mathAudioNote">--</span></div>
+      <div class="math-kv"><span class="opacity-70">FILTER CUTOFF / PAN</span><span id="mathAudioCutoff">440 Hz // 0.00</span></div>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       BOTTOM DOCK: MINIMIZED BY DEFAULT (TOGGLEABLE CONTROLS + OSCILLOSCOPE)
+       ========================================================================= -->
+  <footer class="fixed bottom-0 left-0 right-0 z-20 pointer-events-none p-2 sm:p-3 flex flex-col gap-1.5">
+    <!-- Compact Bottom Dock Toggle Pill & Attribution -->
+    <div class="flex items-center justify-between pointer-events-none">
+      <button id="btnToggleBottomDock" class="hud-panel hud-btn pointer-events-auto px-2.5 py-1 rounded-sm" aria-expanded="false" title="Expand bottom controls, exports &amp; kinematic oscilloscope">
+        HUD [+]
+      </button>
+      <div class="hud-panel pointer-events-auto px-2.5 py-1 rounded-sm text-[9.5px] uppercase tracking-widest opacity-80">
+        BY KAI KLEINBARD
+      </div>
+    </div>
+
+    <!-- Collapsible Bottom Dock Content (Starts Minimized) -->
+    <div id="bottomDockContent" class="hidden flex flex-col gap-1.5">
+      <!-- Video Scrubber Bar (only visible when an uploaded video is active) -->
+      <div id="videoBar" class="hidden hud-panel pointer-events-auto px-2.5 py-1.5 rounded-sm flex items-center gap-2.5 max-w-xl">
+        <button id="btnPlayPause" class="hud-btn">PAUSE</button>
+        <input id="videoScrubber" type="range" min="0" max="1000" value="0" class="hud-range flex-1" aria-label="Video timeline" />
+        <span id="videoTimeLabel" class="text-[10px] opacity-80 tabular-nums">00:00 / 00:00</span>
+      </div>
+
+      <!-- Collapsible Control Bar -->
+      <div class="hud-panel pointer-events-auto rounded-sm">
+        <!-- Compact Primary Action Row -->
+        <div class="flex flex-wrap items-center justify-between gap-1.5 px-2.5 py-1.5">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button id="btnRec" class="hud-btn font-medium" title="Record live animation and accumulate dense kinematic graph">
+              <span class="rec-dot"></span><span id="btnRecText">REC DENSE GRAPH</span>
+            </button>
+            <button id="btnClearGraph" class="hud-btn" title="Clear accumulated dense graph">CLEAR GRAPH</button>
+            <button id="btnClearPins" class="hud-btn hidden sm:inline-block" title="Clear manually pinned keypoints">UNPIN ALL</button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="hidden md:inline text-[9px] uppercase opacity-55 mr-0.5">EXPORT:</span>
+            <button id="expPng" class="hud-btn">PNG</button>
+            <button id="expSvg" class="hud-btn">SVG</button>
+            <button id="expWebm" class="hud-btn" disabled title="Record first to enable WEBM export">WEBM</button>
+            <button id="expJson" class="hud-btn">JSON</button>
+            <span class="h-3 w-px bg-[var(--border)] mx-0.5"></span>
+            <button id="btnToggleDrawer" class="hud-btn" aria-expanded="false">PARAMS [+]</button>
+          </div>
+        </div>
+
+        <!-- Expandable Parameter Drawer -->
+        <div id="paramDrawer" class="hidden border-t border-[var(--border)] px-2.5 py-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-center">
+            <!-- ROI Effect Mode -->
+            <div class="flex flex-col gap-1">
+              <label for="roiEffectSelect" class="text-[9px] uppercase opacity-65">ROI PIXEL EFFECT</label>
+              <select id="roiEffectSelect" class="hud-select">
+                <option value="mixed" selected>MIXED (CYCLE)</option>
+                <option value="xray">X-RAY INVERT</option>
+                <option value="dither">DITHER / BITMAP</option>
+                <option value="mosaic">MOSAIC / PIXELATE</option>
+                <option value="halftone">HALFTONE DOTS</option>
+                <option value="threshold">THRESHOLD</option>
+                <option value="none">NONE (RAW)</option>
+              </select>
+            </div>
+
+            <!-- Annotation Density -->
+            <div class="flex flex-col gap-1">
+              <label class="text-[9px] uppercase opacity-65">ANNOTATION DENSITY</label>
+              <div class="flex gap-1">
+                <button class="hud-btn flex-1 anno-btn" data-anno="full">FULL</button>
+                <button class="hud-btn flex-1 anno-btn active" data-anno="compact">COMPACT</button>
+                <button class="hud-btn flex-1 anno-btn" data-anno="minimal">MIN</button>
+              </div>
+            </div>
+
+            <!-- Max Keypoints Slider -->
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-[9px] uppercase opacity-65">
+                <span>MAX KEYPOINTS</span>
+                <span id="valMaxPts" class="tabular-nums">18</span>
+              </div>
+              <input id="sliderMaxPts" type="range" min="6" max="36" value="18" class="hud-range" />
+            </div>
+
+            <!-- Graph Edge Distance Slider -->
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-[9px] uppercase opacity-65">
+                <span>EDGE THRESHOLD</span>
+                <span id="valEdgeDist" class="tabular-nums">240PX</span>
+              </div>
+              <input id="sliderEdgeDist" type="range" min="80" max="450" value="240" class="hud-range" />
+            </div>
+
+            <!-- ROI Box Size Slider -->
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-[9px] uppercase opacity-65">
+                <span>ROI BOX SCALE</span>
+                <span id="valRoiSize" class="tabular-nums">56PX</span>
+              </div>
+              <input id="sliderRoiSize" type="range" min="24" max="110" value="56" class="hud-range" />
+            </div>
+
+            <!-- Auxiliary Toggles -->
+            <div class="flex flex-wrap gap-1.5 items-center pt-1 sm:pt-3">
+              <button id="toggleLeaders" class="hud-btn active flex-1" title="Draw corner [FIG.01] leader lines to high-acceleration nodes">LEADERS: ON</button>
+              <button id="toggleMirror" class="hud-btn flex-1 hidden" title="Mirror webcam feed horizontally">MIRROR: ON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Derivative Oscilloscope / Sparkline Strip -->
+      <div class="hud-panel pointer-events-auto rounded-sm px-2.5 py-1 flex items-center gap-3 h-[50px]">
+        <div class="hidden sm:flex flex-col justify-center leading-tight min-w-[136px] border-r border-[var(--border)] pr-2.5">
+          <div class="text-[9px] uppercase opacity-60 tracking-widest">KINEMATIC SCOPE</div>
+          <div class="flex justify-between text-[9px] mt-0.5 tabular-nums">
+            <span>V:<strong id="scopeV" class="font-medium">0.0</strong></span>
+            <span>A:<strong id="scopeA" class="font-medium">0.0</strong></span>
+          </div>
+          <div class="flex justify-between text-[9px] tabular-nums">
+            <span>&omega;:<strong id="scopeW" class="font-medium">0.0</strong></span>
+            <span>J:<strong id="scopeJ" class="font-medium">0.0</strong></span>
+          </div>
+        </div>
+        <div class="relative flex-1 h-full">
+          <canvas id="scopeCanvas" class="w-full h-full block"></canvas>
+        </div>
+        <div class="hidden md:flex flex-col justify-center text-right text-[9px] opacity-65 leading-tight min-w-[96px] border-l border-[var(--border)] pl-2.5 tabular-nums">
+          <span id="recSamples">GRAPH: 0 PTS</span>
+          <span id="recStatusLabel">IDLE // CLICK PIN</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       CORE APPLICATION ENGINE (CV TRACKING, KINEMATICS, EFFECTS, AUDIO, MATH)
+       ========================================================================= -->
+  <script>
+    (() => {
+      'use strict';
+
+      /* -----------------------------------------------------------------------
+         1. DOM REFERENCES & OFF-SCREEN BUFFERS
+         ----------------------------------------------------------------------- */
+      const mainCanvas = document.getElementById('mainCanvas');
+      const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: false });
+
+      const grainCanvas = document.getElementById('grainOverlay');
+      const grainCtx = grainCanvas.getContext('2d');
+
+      const scopeCanvas = document.getElementById('scopeCanvas');
+      const scopeCtx = scopeCanvas.getContext('2d');
+
+      const videoEl = document.getElementById('videoInput');
+      const fileInput = document.getElementById('fileInput');
+      const dropOverlay = document.getElementById('dropOverlay');
+      const statusToast = document.getElementById('statusToast');
+
+      // Analysis resolution (fast 60fps optical flow + Shi-Tomasi corner detection)
+      const CV_W = 320;
+      const CV_H = 180;
+
+      // Offscreen canvas for procedural demo specimen rendering (640x360 crisp)
+      const DEMO_W = 640;
+      const DEMO_H = 360;
+      const demoCanvas = document.createElement('canvas');
+      demoCanvas.width = DEMO_W;
+      demoCanvas.height = DEMO_H;
+      const demoCtx = demoCanvas.getContext('2d');
+
+      // Offscreen canvas for downsampled grayscale CV analysis
+      const cvCanvas = document.createElement('canvas');
+      cvCanvas.width = CV_W;
+      cvCanvas.height = CV_H;
+      const cvCtx = cvCanvas.getContext('2d', { willReadFrequently: true });
+
+      // Offscreen canvas for monochrome source frame (used for localized ROI pixel effects)
+      const srcCanvas = document.createElement('canvas');
+      srcCanvas.width = DEMO_W;
+      srcCanvas.height = DEMO_H;
+      const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+
+      // Offscreen scratch canvas for localized ROI effect processing
+      const roiScratch = document.createElement('canvas');
+      const roiScratchCtx = roiScratch.getContext('2d', { willReadFrequently: true });
+
+      // Offscreen persistent dense graph layer (matches viewport dimensions)
+      const denseCanvas = document.createElement('canvas');
+      const denseCtx = denseCanvas.getContext('2d');
+
+      // 4x4 Bayer ordered dithering matrix
+      const BAYER_4X4 = [
+         0,  8,  2, 10,
+        12,  4, 14,  6,
+         3, 11,  1,  9,
+        15,  7, 13,  5
+      ];
+
+      const ROI_EFFECT_CYCLE = ['xray', 'dither', 'mosaic', 'halftone', 'threshold'];
+      const ROI_LABELS = {
+        xray: 'X-RAY',
+        dither: 'BITMAP',
+        mosaic: 'MOSAIC',
+        halftone: 'HALFTONE',
+        threshold: 'THRESH',
+        none: 'RAW'
+      };
+
+      /* -----------------------------------------------------------------------
+         2. GLOBAL STATE & THEME HELPERS
+         ----------------------------------------------------------------------- */
+      const state = {
+        theme: 'darkroom',       // 'darkroom' | 'paper'
+        source: 'demoA',         // 'demoA' | 'demoB' | 'upload' | 'webcam'
+        viewMode: 'live',        // 'live' | 'color' | 'hybrid' | 'dense'
+        roiEffect: 'mixed',      // 'mixed' | 'xray' | 'dither' | 'mosaic' | 'halftone' | 'threshold' | 'none'
+        annoDensity: 'compact',  // 'full' | 'compact' | 'minimal'
+        maxPoints: 18,
+        edgeThreshold: 240,
+        roiSize: 56,
+        showLeaders: true,
+        mirrorWebcam: true,
+        isRecording: false,
+        audioEnabled: false,
+        mathOpen: false,
+        lastMathUpdate: 0,
+        startTime: performance.now(),
+        recStartTime: 0,
+        fps: 60,
+        frameCount: 0,
+        lastFpsTime: performance.now(),
+        lastFrameTime: performance.now(),
+        webcamStream: null,
+        videoObjectUrl: null,
+        viewport: {
+          w: window.innerWidth,
+          h: window.innerHeight,
+          dpr: Math.min(window.devicePixelRatio || 1, 2)
+        },
+        drawRect: { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight },
+        toastTimer: null,
+        mathStats: {
+          maxLambda: 0,
+          meanFlow: 0,
+          meanMae: 0,
+          meanDist: 0,
+          meanAngle: 0,
+          maxOmega: 0,
+          meanAlpha: 0,
+          coherence: 0,
+          centroidX: 0.5,
+          meanV: 0,
+          peakV: 0,
+          meanA: 0,
+          peakA: 0,
+          meanJ: 0,
+          luminance: 0.25,
+          contrast: 0.35,
+          edgeDensity: 0.2,
+          symmetry: 0.5,
+          modeName: 'AEOLIAN (D)',
+          harmonicity: 2.0,
+          modIndex: 1.8,
+          textureLevel: 0,
+          lastNote: '--',
+          filterCutoff: 440,
+          pan: 0
+        }
+      };
+
+      function getThemeColors() {
+        if (state.theme === 'paper') {
+          return {
+            bg: '#f2f2ee',
+            ink: '#0e0e0e',
+            inkDim: 'rgba(14, 14, 14, 0.65)',
+            inkFaint: 'rgba(14, 14, 14, 0.26)',
+            inkUltraFaint: 'rgba(14, 14, 14, 0.12)',
+            labelBg: 'rgba(242, 242, 238, 0.90)',
+            invInk: '#f2f2ee'
+          };
+        }
+        return {
+          bg: '#080808',
+          ink: '#ececec',
+          inkDim: 'rgba(236, 236, 236, 0.65)',
+          inkFaint: 'rgba(236, 236, 236, 0.25)',
+          inkUltraFaint: 'rgba(236, 236, 236, 0.10)',
+          labelBg: 'rgba(8, 8, 8, 0.80)',
+          invInk: '#080808'
+        };
+      }
+
+      function showToast(msg, duration = 2200) {
+        statusToast.textContent = msg;
+        statusToast.style.opacity = '1';
+        if (state.toastTimer) clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => {
+          statusToast.style.opacity = '0';
+        }, duration);
+      }
+
+      function formatClock(ms) {
+        const totalSec = Math.max(0, ms / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = Math.floor(totalSec % 60);
+        const tenths = Math.floor((totalSec * 10) % 10);
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+      }
+
+      /* -----------------------------------------------------------------------
+         3. VIEWPORT RESIZING & ARCHIVAL GRAIN SUBSTRATE
+         ----------------------------------------------------------------------- */
+      function generateGrainTexture() {
+        const gw = 256;
+        const gh = 256;
+        grainCanvas.width = gw;
+        grainCanvas.height = gh;
+        const img = grainCtx.createImageData(gw, gh);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const v = (Math.random() * 255) | 0;
+          d[i] = v;
+          d[i + 1] = v;
+          d[i + 2] = v;
+          d[i + 3] = 255;
+        }
+        grainCtx.putImageData(img, 0, 0);
+      }
+
+      function resizeScopeCanvas() {
+        const dpr = state.viewport.dpr;
+        const scRect = scopeCanvas.getBoundingClientRect();
+        if (scRect.width > 0 && scRect.height > 0) {
+          scopeCanvas.width = Math.floor(scRect.width * dpr);
+          scopeCanvas.height = Math.floor(scRect.height * dpr);
+          scopeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      function resizeViewports() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        state.viewport.w = w;
+        state.viewport.h = h;
+        state.viewport.dpr = dpr;
+
+        mainCanvas.width = Math.floor(w * dpr);
+        mainCanvas.height = Math.floor(h * dpr);
+        mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Resize oscilloscope canvas when visible
+        resizeScopeCanvas();
+
+        // Preserve & redraw dense graph canvas
+        redrawDenseCanvas();
+      }
+
+      /* -----------------------------------------------------------------------
+         4. PROCEDURAL SPECIMEN GENERATORS (DEMO_A: MOTH, DEMO_B: PENDULUM)
+         ----------------------------------------------------------------------- */
+      function renderDemoSpecimenA(tSec) {
+        const ctx = demoCtx;
+        const isPaper = state.theme === 'paper';
+        const isColor = state.viewMode === 'color';
+        const bg = isPaper ? '#f2f2ee' : '#080808';
+        const fg = isColor ? (isPaper ? '#1e3a5f' : '#d6e8ff') : (isPaper ? '#141414' : '#e4e4e4');
+        const mid = isColor ? (isPaper ? '#4b749f' : '#4a76a8') : (isPaper ? '#5c5c56' : '#8a8a8a');
+        const accent = isColor ? '#e59a54' : fg;
+        const soft = isPaper ? 'rgba(20,20,20,0.16)' : 'rgba(235,235,235,0.14)';
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, DEMO_W, DEMO_H);
+
+        // Subtle architectural background arcs & calibration grid
+        ctx.save();
+        ctx.strokeStyle = soft;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(DEMO_W * 0.5, DEMO_H * 0.5, 130 + Math.sin(tSec * 0.7) * 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, DEMO_H * 0.5);
+        ctx.lineTo(DEMO_W, DEMO_H * 0.5);
+        ctx.moveTo(DEMO_W * 0.5, 0);
+        ctx.lineTo(DEMO_W * 0.5, DEMO_H);
+        ctx.stroke();
+        ctx.restore();
+
+        // Organic floating specimen kinematics
+        const cx = DEMO_W * 0.5 + Math.sin(tSec * 0.85) * 42 + Math.cos(tSec * 0.37) * 18;
+        const cy = DEMO_H * 0.5 + Math.cos(tSec * 1.1) * 26;
+        const bodyTilt = Math.sin(tSec * 0.65) * 0.22;
+        const flap = Math.sin(tSec * 2.9);
+        const flapScale = 0.62 + 0.38 * (0.5 + 0.5 * flap);
+        const wingSweep = Math.cos(tSec * 2.9) * 0.16;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(bodyTilt);
+
+        // Draw symmetric articulated wings (left = -1, right = 1)
+        for (const side of [-1, 1]) {
+          ctx.save();
+          ctx.scale(side * flapScale, 1);
+          ctx.rotate(wingSweep);
+
+          // Forewing silhouette
+          ctx.beginPath();
+          ctx.moveTo(6, -12);
+          ctx.bezierCurveTo(46, -98, 135, -108, 152, -46);
+          ctx.bezierCurveTo(158, -14, 118, 16, 86, 22);
+          ctx.bezierCurveTo(54, 28, 22, 14, 6, 6);
+          ctx.closePath();
+
+          const grad = ctx.createRadialGradient(65, -30, 8, 70, -25, 130);
+          if (isColor) {
+            grad.addColorStop(0, isPaper ? '#2a528a' : '#8cc4ff');
+            grad.addColorStop(0.55, isPaper ? '#5e88b8' : '#3a6699');
+            grad.addColorStop(1, isPaper ? '#c9a68c' : '#2c2238');
+          } else if (isPaper) {
+            grad.addColorStop(0, '#181818');
+            grad.addColorStop(0.55, '#555550');
+            grad.addColorStop(1, '#b8b8b0');
+          } else {
+            grad.addColorStop(0, '#f0f0f0');
+            grad.addColorStop(0.55, '#8c8c8c');
+            grad.addColorStop(1, '#2a2a2a');
+          }
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+
+          // Forewing structural veins (high-contrast corner features for Shi-Tomasi)
+          ctx.strokeStyle = bg;
+          ctx.lineWidth = 1.3;
+          const veins = [
+            [14, -8, 128, -56],
+            [16, -2, 136, -24],
+            [14, 4, 108, 8],
+            [10, 6, 78, 18]
+          ];
+          for (const [x1, y1, x2, y2] of veins) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+
+          // Forewing ocellus (distinctive high-contrast eyespot)
+          ctx.beginPath();
+          ctx.arc(92, -42, 16, 0, Math.PI * 2);
+          ctx.fillStyle = bg;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(92, -42, 10, 0, Math.PI * 2);
+          ctx.fillStyle = accent;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(94, -44, 4, 0, Math.PI * 2);
+          ctx.fillStyle = bg;
+          ctx.fill();
+
+          // Wingtip scalloped markers
+          for (let k = 0; k < 3; k++) {
+            const mx = 126 - k * 14;
+            const my = -64 + k * 24;
+            ctx.fillStyle = fg;
+            ctx.fillRect(mx - 3, my - 3, 6, 6);
+          }
+
+          // Hindwing silhouette
+          ctx.beginPath();
+          ctx.moveTo(6, 6);
+          ctx.bezierCurveTo(64, 18, 96, 58, 72, 92);
+          ctx.bezierCurveTo(50, 114, 24, 96, 12, 62);
+          ctx.bezierCurveTo(6, 44, 4, 24, 6, 6);
+          ctx.closePath();
+          ctx.fillStyle = mid;
+          ctx.fill();
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+
+          // Hindwing eyespot
+          ctx.beginPath();
+          ctx.arc(48, 62, 10, 0, Math.PI * 2);
+          ctx.fillStyle = bg;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(48, 62, 5, 0, Math.PI * 2);
+          ctx.fillStyle = fg;
+          ctx.fill();
+
+          // Articulated Antenna
+          ctx.beginPath();
+          ctx.moveTo(4, -30);
+          const antTipX = 34 + Math.sin(tSec * 3.4 + side) * 8;
+          const antTipY = -88 + Math.cos(tSec * 2.2) * 6;
+          ctx.quadraticCurveTo(14, -64, antTipX, antTipY);
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+          ctx.fillStyle = fg;
+          ctx.fillRect(antTipX - 3, antTipY - 3, 6, 6);
+
+          ctx.restore();
+        }
+
+        // Thorax & segmented abdomen
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.ellipse(0, -14, 11, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let seg = 0; seg < 5; seg++) {
+          const sy = 10 + seg * 12;
+          const rx = Math.max(3, 9 - seg * 1.2);
+          ctx.fillStyle = seg % 2 === 0 ? fg : mid;
+          ctx.beginPath();
+          ctx.ellipse(0, sy, rx, 6.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Head & compound eyes
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.arc(-6, -28, 3.2, 0, Math.PI * 2);
+        ctx.arc(6, -28, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Orbiting ambient micro-spores for secondary corner dynamics
+        for (let i = 0; i < 4; i++) {
+          const ang = tSec * (0.45 + i * 0.14) + i * 1.57;
+          const rad = 145 + Math.sin(tSec * 1.2 + i) * 20;
+          const sx = DEMO_W * 0.5 + Math.cos(ang) * rad;
+          const sy = DEMO_H * 0.5 + Math.sin(ang) * (rad * 0.62);
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(sx - 7, sy - 7, 14, 14);
+        }
+      }
+
+      // Persistent state for Demo B coupled orbital pendulum
+      const demoBState = {
+        a1: Math.PI * 0.62,
+        a2: Math.PI * 0.25,
+        v1: 0.4,
+        v2: -0.9
+      };
+
+      function renderDemoSpecimenB(tSec, dt) {
+        const ctx = demoCtx;
+        const isPaper = state.theme === 'paper';
+        const isColor = state.viewMode === 'color';
+        const bg = isPaper ? '#f2f2ee' : '#080808';
+        const fg = isColor ? (isPaper ? '#1c4e4f' : '#9ee6d8') : (isPaper ? '#121212' : '#eaeaea');
+        const mid = isColor ? (isPaper ? '#c46a3b' : '#e07a5f') : (isPaper ? '#64645e' : '#7f7f7f');
+        const faint = isPaper ? 'rgba(18,18,18,0.18)' : 'rgba(234,234,234,0.16)';
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, DEMO_W, DEMO_H);
+
+        // Advance articulated double-pendulum + orbital mechanism
+        const step = Math.min(0.03, Math.max(0.005, dt));
+        const g = 9.8;
+        const L1 = 88;
+        const L2 = 76;
+        const m1 = 1.6;
+        const m2 = 1.1;
+
+        const delta = demoBState.a1 - demoBState.a2;
+        const den1 = (m1 + m2) * L1 - m2 * L1 * Math.cos(delta) * Math.cos(delta);
+        const den2 = (L2 / L1) * den1;
+
+        const acc1 = (
+          m2 * L1 * demoBState.v1 * demoBState.v1 * Math.sin(delta) * Math.cos(delta) +
+          m2 * g * Math.sin(demoBState.a2) * Math.cos(delta) +
+          m2 * L2 * demoBState.v2 * demoBState.v2 * Math.sin(delta) -
+          (m1 + m2) * g * Math.sin(demoBState.a1)
+        ) / den1;
+
+        const acc2 = (
+          -m2 * L2 * demoBState.v2 * demoBState.v2 * Math.sin(delta) * Math.cos(delta) +
+          (m1 + m2) * (g * Math.sin(demoBState.a1) * Math.cos(delta) - L1 * demoBState.v1 * demoBState.v1 * Math.sin(delta) - g * Math.sin(demoBState.a2))
+        ) / den2;
+
+        // Gentle energy injection so pendulum never stalls
+        demoBState.v1 = (demoBState.v1 + acc1 * step * 2.2) * 0.9992 + Math.cos(tSec * 1.4) * 0.004;
+        demoBState.v2 = (demoBState.v2 + acc2 * step * 2.2) * 0.9992 - Math.sin(tSec * 1.7) * 0.004;
+        demoBState.a1 += demoBState.v1 * step * 2.2;
+        demoBState.a2 += demoBState.v2 * step * 2.2;
+
+        const ox = DEMO_W * 0.5;
+        const oy = DEMO_H * 0.44;
+        const x1 = ox + Math.sin(demoBState.a1) * L1;
+        const y1 = oy + Math.cos(demoBState.a1) * L1;
+        const x2 = x1 + Math.sin(demoBState.a2) * L2;
+        const y2 = y1 + Math.cos(demoBState.a2) * L2;
+
+        // Concentric orbital rings
+        ctx.strokeStyle = faint;
+        ctx.lineWidth = 1;
+        for (const r of [65, 118, 165]) {
+          ctx.beginPath();
+          ctx.arc(ox, oy, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Rotating satellite arms
+        for (let i = 0; i < 4; i++) {
+          const ang = tSec * (0.65 + (i % 2) * 0.35) * (i % 2 === 0 ? 1 : -1) + i * (Math.PI / 2);
+          const r = i % 2 === 0 ? 118 : 165;
+          const sx = ox + Math.cos(ang) * r;
+          const sy = oy + Math.sin(ang) * r;
+          ctx.strokeStyle = mid;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(ox, oy);
+          ctx.lineTo(sx, sy);
+          ctx.stroke();
+
+          ctx.fillStyle = fg;
+          ctx.fillRect(sx - 7, sy - 7, 14, 14);
+          ctx.fillStyle = bg;
+          ctx.fillRect(sx - 3, sy - 3, 6, 6);
+        }
+
+        // Pendulum linkages
+        ctx.strokeStyle = fg;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // High-contrast pivot & bob targets
+        const drawTarget = (x, y, r) => {
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = bg;
+          ctx.beginPath();
+          ctx.arc(x, y, r * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(x - r - 4, y - r - 4, (r + 4) * 2, (r + 4) * 2);
+        };
+
+        drawTarget(ox, oy, 9);
+        drawTarget(x1, y1, 13);
+        drawTarget(x2, y2, 16);
+      }
+
+      /* -----------------------------------------------------------------------
+         5. COMPUTER VISION: SHI-TOMASI CORNERS + LUCAS-KANADE OPTICAL FLOW
+         ----------------------------------------------------------------------- */
+      const prevGray = new Uint8Array(CV_W * CV_H);
+      const currGray = new Uint8Array(CV_W * CV_H);
+      const gradX = new Float32Array(CV_W * CV_H);
+      const gradY = new Float32Array(CV_W * CV_H);
+      let hasPrevFrame = false;
+
+      let nextPointId = 1;
+      let trackedPoints = [];
+      let activeEdges = [];
+      const edgeHistory = new Map(); // edgeKey -> { angle, omega, dist, lastSeen }
+
+      function resetTracking() {
+        trackedPoints = [];
+        activeEdges = [];
+        edgeHistory.clear();
+        hasPrevFrame = false;
+      }
+
+      function computeDrawRect(sw, sh) {
+        const vw = state.viewport.w;
+        const vh = state.viewport.h;
+        const srcAspect = sw / Math.max(1, sh);
+        const vpAspect = vw / Math.max(1, vh);
+
+        // Cover-fit with gentle framing so full viewport is utilized
+        let rw, rh, rx, ry;
+        if (state.source === 'demoA' || state.source === 'demoB') {
+          // Contain-fit for procedural specimens so the entire organism stays visible
+          if (vpAspect > srcAspect) {
+            rh = vh * 0.86;
+            rw = rh * srcAspect;
+          } else {
+            rw = vw * 0.94;
+            rh = rw / srcAspect;
+          }
+          rx = (vw - rw) * 0.5;
+          ry = (vh - rh) * 0.5;
+        } else {
+          // Cover-fit for uploaded video & webcam
+          if (vpAspect > srcAspect) {
+            rw = vw;
+            rh = vw / srcAspect;
+          } else {
+            rh = vh;
+            rw = vh * srcAspect;
+          }
+          rx = (vw - rw) * 0.5;
+          ry = (vh - rh) * 0.5;
+        }
+        state.drawRect = { x: rx, y: ry, w: rw, h: rh };
+      }
+
+      function cvToViewport(cx, cy) {
+        const r = state.drawRect;
+        return {
+          x: r.x + (cx / CV_W) * r.w,
+          y: r.y + (cy / CV_H) * r.h
+        };
+      }
+
+      function viewportToCv(vx, vy) {
+        const r = state.drawRect;
+        return {
+          cx: ((vx - r.x) / Math.max(1, r.w)) * CV_W,
+          cy: ((vy - r.y) / Math.max(1, r.h)) * CV_H
+        };
+      }
+
+      /**
+       * Extract downsampled grayscale frame & spatial gradients from active source
+       */
+      function extractGrayscaleFromSource(sourceEl, sw, sh, mirror) {
+        // Save previous grayscale buffer
+        prevGray.set(currGray);
+
+        // Draw into downsampled CV canvas
+        cvCtx.save();
+        if (mirror) {
+          cvCtx.translate(CV_W, 0);
+          cvCtx.scale(-1, 1);
+        }
+        cvCtx.drawImage(sourceEl, 0, 0, sw, sh, 0, 0, CV_W, CV_H);
+        cvCtx.restore();
+
+        // Also draw into higher-res monochrome srcCanvas for crisp ROI pixel effects
+        if (srcCanvas.width !== DEMO_W || srcCanvas.height !== DEMO_H) {
+          srcCanvas.width = DEMO_W;
+          srcCanvas.height = DEMO_H;
+        }
+        srcCtx.save();
+        if (mirror) {
+          srcCtx.translate(DEMO_W, 0);
+          srcCtx.scale(-1, 1);
+        }
+        srcCtx.drawImage(sourceEl, 0, 0, sw, sh, 0, 0, DEMO_W, DEMO_H);
+        srcCtx.restore();
+
+        const data = cvCtx.getImageData(0, 0, CV_W, CV_H).data;
+        for (let i = 0, p = 0; i < currGray.length; i++, p += 4) {
+          currGray[i] = (0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]) | 0;
+        }
+
+        // Compute central-difference spatial gradients on prevGray (for LK) or currGray
+        const src = hasPrevFrame ? prevGray : currGray;
+        let gradMagSum = 0;
+        for (let y = 1; y < CV_H - 1; y++) {
+          const row = y * CV_W;
+          for (let x = 1; x < CV_W - 1; x++) {
+            const idx = row + x;
+            const gx = (src[idx + 1] - src[idx - 1]) * 0.5;
+            const gy = (src[idx + CV_W] - src[idx - CV_W]) * 0.5;
+            gradX[idx] = gx;
+            gradY[idx] = gy;
+            gradMagSum += Math.abs(gx) + Math.abs(gy);
+          }
+        }
+
+        // Compute real-time image acoustic fingerprint (Luminance, Contrast, Edge Density, Symmetry)
+        // Sampled on a 2px stride for zero-overhead 60fps performance
+        let sumL = 0;
+        let sumL2 = 0;
+        let symDiffSum = 0;
+        let sampleCount = 0;
+        let symCount = 0;
+        const halfW = CV_W >> 1;
+
+        for (let y = 2; y < CV_H - 2; y += 2) {
+          const row = y * CV_W;
+          for (let x = 2; x < CV_W - 2; x += 2) {
+            const l = currGray[row + x] / 255;
+            sumL += l;
+            sumL2 += l * l;
+            sampleCount++;
+            if (x < halfW) {
+              const mirrorL = currGray[row + (CV_W - 1 - x)] / 255;
+              symDiffSum += Math.abs(l - mirrorL);
+              symCount++;
+            }
+          }
+        }
+
+        const rawLum = sampleCount ? sumL / sampleCount : 0.25;
+        const rawVar = sampleCount ? Math.max(0, sumL2 / sampleCount - rawLum * rawLum) : 0;
+        const rawContrast = Math.min(1, Math.sqrt(rawVar) * 2.4);
+        const rawEdgeDensity = Math.min(1, (gradMagSum / ((CV_W - 2) * (CV_H - 2))) / 28);
+        const rawSymmetry = Math.max(0, Math.min(1, 1 - (symCount ? (symDiffSum / symCount) * 2.2 : 0)));
+
+        // Smooth visual descriptors so sonic character morphs organically
+        const smooth = 0.08;
+        const ms = state.mathStats;
+        ms.luminance += (rawLum - ms.luminance) * smooth;
+        ms.contrast += (rawContrast - ms.contrast) * smooth;
+        ms.edgeDensity += (rawEdgeDensity - ms.edgeDensity) * smooth;
+        ms.symmetry += (rawSymmetry - ms.symmetry) * smooth;
+      }
+
+      /**
+       * Bilinear sample helper for subpixel Lucas-Kanade interpolation
+       */
+      function sampleGray(buf, x, y) {
+        const x0 = Math.floor(x);
+        const y0 = Math.floor(y);
+        if (x0 < 0 || y0 < 0 || x0 >= CV_W - 1 || y0 >= CV_H - 1) return 0;
+        const fx = x - x0;
+        const fy = y - y0;
+        const i00 = y0 * CV_W + x0;
+        const v00 = buf[i00];
+        const v10 = buf[i00 + 1];
+        const v01 = buf[i00 + CV_W];
+        const v11 = buf[i00 + CV_W + 1];
+        return (v00 * (1 - fx) + v10 * fx) * (1 - fy) + (v01 * (1 - fx) + v11 * fx) * fy;
+      }
+
+      /**
+       * Iterative Lucas-Kanade Optical Flow (9x9 window, 5 iterations)
+       */
+      function trackPointLK(pt) {
+        const half = 4; // 9x9 patch
+        const px = pt.cx;
+        const py = pt.cy;
+
+        if (px < half + 2 || py < half + 2 || px >= CV_W - half - 2 || py >= CV_H - half - 2) {
+          return false;
+        }
+
+        // Precompute structure tensor A^T A around (px, py) in prevGray
+        let sxx = 0, syy = 0, sxy = 0;
+        const ix0 = Math.round(px);
+        const iy0 = Math.round(py);
+
+        for (let dy = -half; dy <= half; dy++) {
+          const row = (iy0 + dy) * CV_W;
+          for (let dx = -half; dx <= half; dx++) {
+            const idx = row + (ix0 + dx);
+            const gx = gradX[idx];
+            const gy = gradY[idx];
+            sxx += gx * gx;
+            syy += gy * gy;
+            sxy += gx * gy;
+          }
+        }
+
+        const det = sxx * syy - sxy * sxy;
+        if (det < 120) return pt.pinned; // Flat region
+
+        const invDet = 1.0 / det;
+        let u = 0;
+        let v = 0;
+
+        // 5 Gauss-Newton iterations
+        for (let iter = 0; iter < 5; iter++) {
+          let bx = 0;
+          let by = 0;
+          for (let dy = -half; dy <= half; dy++) {
+            const row = (iy0 + dy) * CV_W;
+            for (let dx = -half; dx <= half; dx++) {
+              const idx = row + (ix0 + dx);
+              const gx = gradX[idx];
+              const gy = gradY[idx];
+              const iPrev = prevGray[idx];
+              const iCurr = sampleGray(currGray, px + dx + u, py + dy + v);
+              const it = iCurr - iPrev;
+              bx += gx * it;
+              by += gy * it;
+            }
+          }
+          const du = -(syy * bx - sxy * by) * invDet;
+          const dv = -(-sxy * bx + sxx * by) * invDet;
+          u += du;
+          v += dv;
+          if (du * du + dv * dv < 0.0025) break;
+          if (u * u + v * v > 400) return false; // Unreasonable jump (>20px/frame)
+        }
+
+        const fx = px + u;
+        const fy = py + v;
+        if (fx < half + 2 || fy < half + 2 || fx >= CV_W - half - 2 || fy >= CV_H - half - 2) {
+          return false;
+        }
+
+        // Photometric consistency check (Mean Absolute Error over patch)
+        let mae = 0;
+        const patchSize = (half * 2 + 1) * (half * 2 + 1);
+        for (let dy = -half; dy <= half; dy++) {
+          const row = (iy0 + dy) * CV_W;
+          for (let dx = -half; dx <= half; dx++) {
+            const iPrev = prevGray[row + (ix0 + dx)];
+            const iCurr = sampleGray(currGray, fx + dx, fy + dy);
+            mae += Math.abs(iCurr - iPrev);
+          }
+        }
+        mae /= patchSize;
+        if (mae > (pt.pinned ? 56 : 36)) return false;
+
+        pt.lastFlowMag = Math.hypot(u, v);
+        pt.lastMae = mae;
+        pt.cx = fx;
+        pt.cy = fy;
+        pt.age++;
+        return true;
+      }
+
+      /**
+       * Shi-Tomasi Corner Detector with spatial Non-Maximum Suppression
+       */
+      function detectNewKeypoints(neededCount) {
+        if (neededCount <= 0) return;
+
+        // Compute gradients on currGray
+        const gxBuf = new Float32Array(CV_W * CV_H);
+        const gyBuf = new Float32Array(CV_W * CV_H);
+        for (let y = 1; y < CV_H - 1; y++) {
+          const row = y * CV_W;
+          for (let x = 1; x < CV_W - 1; x++) {
+            const idx = row + x;
+            gxBuf[idx] = (currGray[idx + 1] - currGray[idx - 1]) * 0.5;
+            gyBuf[idx] = (currGray[idx + CV_W] - currGray[idx - CV_W]) * 0.5;
+          }
+        }
+
+        const candidates = [];
+        const margin = 10;
+        const step = 3; // Stride 3 for crisp 60fps performance
+
+        for (let y = margin; y < CV_H - margin; y += step) {
+          for (let x = margin; x < CV_W - margin; x += step) {
+            let sxx = 0, syy = 0, sxy = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              const row = (y + dy) * CV_W;
+              for (let dx = -1; dx <= 1; dx++) {
+                const idx = row + (x + dx);
+                const gx = gxBuf[idx];
+                const gy = gyBuf[idx];
+                sxx += gx * gx;
+                syy += gy * gy;
+                sxy += gx * gy;
+              }
+            }
+            const trace = sxx + syy;
+            const diff = sxx - syy;
+            const disc = Math.sqrt(diff * diff + 4 * sxy * sxy);
+            const lambdaMin = 0.5 * (trace - disc);
+
+            if (lambdaMin > 220) {
+              candidates.push({ cx: x, cy: y, score: lambdaMin });
+            }
+          }
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        if (candidates.length > 0) {
+          state.mathStats.maxLambda = candidates[0].score;
+        }
+
+        const minDistSq = 18 * 18; // Minimum spacing in CV pixels
+        let added = 0;
+
+        for (let i = 0; i < candidates.length && added < neededCount; i++) {
+          const cand = candidates[i];
+          let tooClose = false;
+          for (let j = 0; j < trackedPoints.length; j++) {
+            const p = trackedPoints[j];
+            const dx = p.cx - cand.cx;
+            const dy = p.cy - cand.cy;
+            if (dx * dx + dy * dy < minDistSq) {
+              tooClose = true;
+              break;
+            }
+          }
+          if (tooClose) continue;
+
+          const vp = cvToViewport(cand.cx, cand.cy);
+          const id = nextPointId++;
+          trackedPoints.push({
+            id,
+            label: `KP_${String(id).padStart(2, '0')}`,
+            cx: cand.cx,
+            cy: cand.cy,
+            x: vp.x,
+            y: vp.y,
+            vx: 0,
+            vy: 0,
+            speed: 0,
+            ax: 0,
+            ay: 0,
+            accel: 0,
+            jerk: 0,
+            prevAccel: 0,
+            age: 1,
+            pinned: false,
+            effectType: ROI_EFFECT_CYCLE[id % ROI_EFFECT_CYCLE.length],
+            lastFlowMag: 0,
+            lastMae: 0,
+            trail: [{ x: vp.x, y: vp.y }]
+          });
+          added++;
+        }
+      }
+
+      /**
+       * Update optical flow tracking, kinematic derivatives (v, a, j), and angular graph edges
+       */
+      function updateTrackingAndKinematics(dt, now) {
+        const safeDt = Math.max(0.008, Math.min(dt, 0.06));
+        const alphaV = 0.28;
+        const alphaA = 0.22;
+        const alphaJ = 0.18;
+
+        if (hasPrevFrame) {
+          const survivors = [];
+          let sumFlow = 0;
+          let sumMae = 0;
+
+          for (let i = 0; i < trackedPoints.length; i++) {
+            const pt = trackedPoints[i];
+            if (trackPointLK(pt)) {
+              sumFlow += pt.lastFlowMag || 0;
+              sumMae += pt.lastMae || 0;
+              const vp = cvToViewport(pt.cx, pt.cy);
+
+              const rawVx = (vp.x - pt.x) / safeDt;
+              const rawVy = (vp.y - pt.y) / safeDt;
+              const nextVx = pt.vx + (rawVx - pt.vx) * alphaV;
+              const nextVy = pt.vy + (rawVy - pt.vy) * alphaV;
+
+              const rawAx = (nextVx - pt.vx) / safeDt;
+              const rawAy = (nextVy - pt.vy) / safeDt;
+              const nextAx = pt.ax + (rawAx - pt.ax) * alphaA;
+              const nextAy = pt.ay + (rawAy - pt.ay) * alphaA;
+
+              const speed = Math.hypot(nextVx, nextVy);
+              const accel = Math.hypot(nextAx, nextAy);
+              const rawJerk = Math.abs(accel - pt.prevAccel) / safeDt;
+              const jerk = pt.jerk + (rawJerk - pt.jerk) * alphaJ;
+
+              pt.x = vp.x;
+              pt.y = vp.y;
+              pt.vx = nextVx;
+              pt.vy = nextVy;
+              pt.speed = speed;
+              pt.ax = nextAx;
+              pt.ay = nextAy;
+              pt.prevAccel = pt.accel;
+              pt.accel = accel;
+              pt.jerk = jerk;
+
+              pt.trail.push({ x: vp.x, y: vp.y });
+              if (pt.trail.length > 26) pt.trail.shift();
+
+              survivors.push(pt);
+            }
+          }
+          trackedPoints = survivors;
+          if (survivors.length > 0) {
+            state.mathStats.meanFlow = sumFlow / survivors.length;
+            state.mathStats.meanMae = sumMae / survivors.length;
+          }
+        }
+
+        // Replenish corners up to target maxPoints
+        if (trackedPoints.length < state.maxPoints && (state.frameCount % 6 === 0 || !hasPrevFrame)) {
+          detectNewKeypoints(state.maxPoints - trackedPoints.length);
+        }
+        hasPrevFrame = true;
+
+        // Build proximity graph edges (capped to 3 nearest neighbors per node for clean topology)
+        activeEdges = [];
+        const seenPairs = new Set();
+        const maxDist = state.edgeThreshold;
+        const maxDistSq = maxDist * maxDist;
+
+        for (let i = 0; i < trackedPoints.length; i++) {
+          const a = trackedPoints[i];
+          const neighbors = [];
+          for (let j = 0; j < trackedPoints.length; j++) {
+            if (i === j) continue;
+            const b = trackedPoints[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 <= maxDistSq) {
+              neighbors.push({ pt: b, d2 });
+            }
+          }
+          neighbors.sort((u, v) => u.d2 - v.d2);
+
+          const limit = Math.min(3, neighbors.length);
+          for (let k = 0; k < limit; k++) {
+            const b = neighbors[k].pt;
+            const id1 = Math.min(a.id, b.id);
+            const id2 = Math.max(a.id, b.id);
+            const key = `${id1}-${id2}`;
+            if (seenPairs.has(key)) continue;
+            seenPairs.add(key);
+
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy);
+            const angle = (Math.atan2(dy, dx) * 180) / Math.PI; // degrees [-180, 180]
+
+            const prev = edgeHistory.get(key);
+            let omega = 0;
+            let alpha = 0;
+            let relV = 0;
+
+            if (prev) {
+              // Shortest wrapped angular difference
+              let dTheta = angle - prev.angle;
+              if (dTheta > 180) dTheta -= 360;
+              if (dTheta < -180) dTheta += 360;
+              const rawOmega = dTheta / safeDt;
+              omega = prev.omega + (rawOmega - prev.omega) * 0.28;
+              alpha = (omega - prev.omega) / safeDt;
+              relV = (dist - prev.dist) / safeDt;
+            }
+
+            edgeHistory.set(key, { angle, omega, dist, lastSeen: now });
+
+            activeEdges.push({
+              key,
+              a,
+              b,
+              dist,
+              angle,
+              omega,
+              alpha,
+              relV
+            });
+          }
+        }
+
+        // Prune stale edge history periodically
+        if (state.frameCount % 60 === 0) {
+          for (const [k, v] of edgeHistory.entries()) {
+            if (now - v.lastSeen > 1500) edgeHistory.delete(k);
+          }
+        }
+
+        // Aggregate real-time angular geometry & Kuramoto phase coherence R
+        const m = activeEdges.length;
+        if (m > 0) {
+          let sumDist = 0, sumCos = 0, sumSin = 0, maxW = 0, sumAlpha = 0;
+          for (let i = 0; i < m; i++) {
+            const e = activeEdges[i];
+            sumDist += e.dist;
+            const rad = (e.angle * Math.PI) / 180;
+            sumCos += Math.cos(rad);
+            sumSin += Math.sin(rad);
+            const absW = Math.abs(e.omega);
+            if (absW > maxW) maxW = absW;
+            sumAlpha += Math.abs(e.alpha);
+          }
+          state.mathStats.meanDist = sumDist / m;
+          state.mathStats.coherence = Math.hypot(sumCos, sumSin) / m;
+          state.mathStats.meanAngle = (Math.atan2(sumSin, sumCos) * 180) / Math.PI;
+          state.mathStats.maxOmega = maxW;
+          state.mathStats.meanAlpha = sumAlpha / m;
+        } else {
+          state.mathStats.meanDist = 0;
+          state.mathStats.coherence = 0;
+          state.mathStats.maxOmega = 0;
+          state.mathStats.meanAlpha = 0;
+        }
+      }
+
+      /* -----------------------------------------------------------------------
+         6. GENERATIVE ALGORITHMIC AUDIO ENGINE (TONE.JS - IMAGE FINGERPRINT)
+         ----------------------------------------------------------------------- */
+      // Four distinct modal palettes selected automatically by image luminance & tone
+      const AUDIO_MODES = [
+        {
+          name: 'PHRYGIAN // C',
+          subHz: 65.41, // C2
+          scale: ['C2', 'Db2', 'F2', 'G2', 'Ab2', 'C3', 'Db3', 'Eb3', 'F3', 'G3', 'Ab3', 'Bb3', 'C4', 'Db4', 'Eb4', 'G4'],
+          chords: [
+            ['C2', 'G2', 'Db3', 'Eb3'],
+            ['Ab2', 'Eb3', 'G3', 'C4'],
+            ['F2', 'C3', 'Ab3', 'Bb3'],
+            ['Db2', 'Ab2', 'F3', 'G3']
+          ]
+        },
+        {
+          name: 'AEOLIAN // D',
+          subHz: 73.42, // D2
+          scale: ['D2', 'A2', 'D3', 'E3', 'F3', 'G3', 'A3', 'Bb3', 'C4', 'D4', 'E4', 'F4', 'A4', 'Bb4', 'C5', 'D5'],
+          chords: [
+            ['D2', 'A2', 'E3', 'F3'],
+            ['Bb2', 'F3', 'A3', 'C4'],
+            ['G2', 'D3', 'F3', 'A3'],
+            ['A2', 'E3', 'G3', 'C4']
+          ]
+        },
+        {
+          name: 'DORIAN // E',
+          subHz: 82.41, // E2
+          scale: ['E2', 'B2', 'E3', 'F#3', 'G3', 'A3', 'B3', 'C#4', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'E5'],
+          chords: [
+            ['E2', 'B2', 'F#3', 'G3'],
+            ['A2', 'E3', 'B3', 'C#4'],
+            ['D2', 'A2', 'E3', 'F#3'],
+            ['B2', 'F#3', 'A3', 'D4']
+          ]
+        },
+        {
+          name: 'LYDIAN // F',
+          subHz: 87.31, // F2
+          scale: ['F2', 'C3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5'],
+          chords: [
+            ['F2', 'C3', 'G3', 'A3'],
+            ['G2', 'D3', 'A3', 'B3'],
+            ['A2', 'E3', 'B3', 'C4'],
+            ['C2', 'G2', 'D3', 'E3']
+          ]
+        }
+      ];
+
+      const audioEngine = {
+        initialized: false,
+        filter: null,
+        panner: null,
+        reverb: null,
+        delay: null,
+        padSynth: null,
+        pluckSynth: null,
+        bassSynth: null,
+        activeModeIdx: 1,
+        activeChordIdx: -1,
+        lastPluckTime: 0,
+        lastSwellTime: 0,
+        lastTimbreUpdate: 0,
+        edgeCooldowns: new Map()
+      };
+
+      function selectModeIndexFromImage(lum, sym) {
+        // Combine luminance with symmetry offset so dark vs bright & symmetric vs chaotic images diverge clearly
+        const toneMetric = lum * 0.8 + (1 - sym) * 0.2;
+        if (toneMetric < 0.22) return 0; // PHRYGIAN (dark, brooding)
+        if (toneMetric < 0.44) return 1; // AEOLIAN (nocturnal, organic)
+        if (toneMetric < 0.68) return 2; // DORIAN (balanced, kinetic)
+        return 3;                        // LYDIAN (bright, crystalline)
+      }
+
+      async function initAudioEngine() {
+        if (audioEngine.initialized) return true;
+        if (typeof Tone === 'undefined') {
+          showToast('AUDIO ENGINE UNAVAILABLE (TONE.JS NOT LOADED)', 3000);
+          return false;
+        }
+        try {
+          await Tone.start();
+          const limiter = new Tone.Limiter(-3).toDestination();
+          const reverb = new Tone.Reverb({ decay: 3.6, wet: 0.42 }).connect(limiter);
+          const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.24, wet: 0.18 }).connect(reverb);
+          const filter = new Tone.Filter({ type: 'lowpass', frequency: 1400, Q: 1.2 }).connect(delay);
+          const panner = new Tone.Panner(0).connect(filter);
+
+          // Gentle breathing harmonic swells (never drones continuously; decays cleanly to silence)
+          const padSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.9, decay: 1.4, sustain: 0.18, release: 2.2 }
+          }).connect(panner);
+          padSynth.volume.value = -19;
+
+          // Crystalline FM bell/pluck voice driven by edge angles & angular velocity
+          const pluckSynth = new Tone.PolySynth(Tone.FMSynth, {
+            harmonicity: 2.0,
+            modulationIndex: 1.8,
+            oscillator: { type: 'sine' },
+            modulation: { type: 'triangle' },
+            envelope: { attack: 0.012, decay: 0.65, sustain: 0.04, release: 1.2 }
+          }).connect(panner);
+          pluckSynth.volume.value = -10;
+
+          // Soft decaying bass pulse triggered only on phrase/chord transitions (no continuous drone)
+          const bassSynth = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.08, decay: 1.2, sustain: 0.0, release: 1.1 }
+          }).connect(reverb);
+          bassSynth.volume.value = -16;
+
+          audioEngine.filter = filter;
+          audioEngine.panner = panner;
+          audioEngine.reverb = reverb;
+          audioEngine.delay = delay;
+          audioEngine.padSynth = padSynth;
+          audioEngine.pluckSynth = pluckSynth;
+          audioEngine.bassSynth = bassSynth;
+          audioEngine.initialized = true;
+          return true;
+        } catch (err) {
+          console.warn('Audio init error:', err);
+          showToast('UNABLE TO INITIALIZE AUDIO ENGINE', 3000);
+          return false;
+        }
+      }
+
+      async function toggleAudioScore() {
+        const btnAudio = document.getElementById('btnAudio');
+        if (!state.audioEnabled) {
+          const ok = await initAudioEngine();
+          if (!ok) return;
+          state.audioEnabled = true;
+          btnAudio.classList.add('active');
+          btnAudio.textContent = 'AUDIO: ON';
+          const ms = state.mathStats;
+          audioEngine.activeModeIdx = selectModeIndexFromImage(ms.luminance, ms.symmetry);
+          audioEngine.activeChordIdx = 0;
+          const mode = AUDIO_MODES[audioEngine.activeModeIdx];
+          ms.modeName = mode.name;
+          // Play one gentle introductory harmonic swell that naturally decays
+          audioEngine.padSynth.triggerAttackRelease(mode.chords[0], '2n', undefined, 0.35);
+          audioEngine.bassSynth.triggerAttackRelease(mode.subHz, '2n', undefined, 0.4);
+          audioEngine.lastSwellTime = performance.now();
+          showToast(`AUDIO FINGERPRINT ACTIVE // ${mode.name}`);
+        } else {
+          state.audioEnabled = false;
+          btnAudio.classList.remove('active');
+          btnAudio.textContent = 'AUDIO: OFF';
+          if (audioEngine.initialized && audioEngine.padSynth) {
+            audioEngine.padSynth.releaseAll();
+            audioEngine.pluckSynth.releaseAll();
+            audioEngine.bassSynth.triggerRelease();
+          }
+          showToast('ALGORITHMIC AUDIO SCORE MUTED');
+        }
+      }
+
+      function updateAudioScore(now) {
+        const ms = state.mathStats;
+
+        // 1. Derive sonic character directly from live image descriptors
+        const targetModeIdx = selectModeIndexFromImage(ms.luminance, ms.symmetry);
+        const mode = AUDIO_MODES[targetModeIdx];
+        ms.modeName = mode.name;
+
+        // High symmetry -> pure harmonic ratios (2.0); low symmetry -> crystalline/metallic inharmonicity
+        const targetHarm = ms.symmetry > 0.65
+          ? 2.0
+          : +(1.35 + (1 - ms.symmetry) * 1.45).toFixed(2);
+
+        // Contrast directly drives FM sideband richness (0.5 soft sine -> 6.8 stark metallic)
+        const targetModIndex = +(0.5 + ms.contrast * 6.3).toFixed(2);
+
+        const targetCutoff = Math.max(320, Math.min(5400, 420 + 1900 * ms.coherence + 1200 * ms.contrast + 4.0 * ms.meanV));
+        const targetPan = Math.max(-0.85, Math.min(0.85, 2 * ms.centroidX - 1));
+
+        ms.harmonicity = targetHarm;
+        ms.modIndex = targetModIndex;
+        ms.filterCutoff = targetCutoff;
+        ms.pan = targetPan;
+
+        if (!state.audioEnabled || !audioEngine.initialized) return;
+
+        audioEngine.filter.frequency.rampTo(targetCutoff, 0.14);
+        audioEngine.panner.pan.rampTo(targetPan, 0.14);
+
+        // Throttle FM voice timbre updates & reverb wetness
+        if (now - audioEngine.lastTimbreUpdate > 220) {
+          audioEngine.lastTimbreUpdate = now;
+          audioEngine.pluckSynth.set({
+            harmonicity: targetHarm,
+            modulationIndex: targetModIndex
+          });
+          // Minimalist low-edge images get wider reverb; dense detailed images stay crisper
+          audioEngine.reverb.wet.rampTo(Math.max(0.18, Math.min(0.62, 0.56 - ms.edgeDensity * 0.35)), 0.3);
+        }
+
+        // Trigger a gentle, decaying harmonic swell only when motion is active & phrase shifts
+        const normAngle = (ms.meanAngle + 180) / 360;
+        const chordIdx = Math.floor(normAngle * mode.chords.length) % mode.chords.length;
+        const modeChanged = targetModeIdx !== audioEngine.activeModeIdx;
+        const hasMotion = ms.meanV > 4 || ms.maxOmega > 10;
+
+        if (hasMotion && (modeChanged || (chordIdx !== audioEngine.activeChordIdx && now - audioEngine.lastSwellTime > 2800))) {
+          const swellVel = Math.max(0.16, Math.min(0.42, 0.18 + ms.coherence * 0.22));
+          audioEngine.padSynth.triggerAttackRelease(mode.chords[chordIdx], '2n.', undefined, swellVel);
+          audioEngine.bassSynth.triggerAttackRelease(mode.subHz, '2n', undefined, 0.32);
+          audioEngine.activeModeIdx = targetModeIdx;
+          audioEngine.activeChordIdx = chordIdx;
+          audioEngine.lastSwellTime = now;
+        }
+
+        // Trigger melodic notes from the active mode's scale based on angular velocity spikes
+        if (now - audioEngine.lastPluckTime > 140 && activeEdges.length > 0) {
+          let bestEdge = null;
+          let bestScore = 0;
+          for (let i = 0; i < activeEdges.length; i++) {
+            const e = activeEdges[i];
+            const lastTrig = audioEngine.edgeCooldowns.get(e.key) || 0;
+            if (now - lastTrig < 480) continue;
+            const score = Math.abs(e.omega) + Math.abs(e.relV) * 0.25;
+            if (score > bestScore && score > 15) {
+              bestScore = score;
+              bestEdge = e;
+            }
+          }
+
+          if (bestEdge) {
+            const angleNorm = (bestEdge.angle + 180) / 360;
+            // Closer edges shift up in register; brighter images bias toward upper overtones
+            const distShift = bestEdge.dist < state.edgeThreshold * 0.45 ? 3 : 0;
+            const lumShift = ms.luminance > 0.55 ? 2 : 0;
+            const idx = (Math.floor(angleNorm * mode.scale.length) + distShift + lumShift) % mode.scale.length;
+            const note = mode.scale[idx];
+            const vel = Math.max(0.18, Math.min(0.85, Math.log1p(bestScore) / 6.0));
+            // Higher edge density yields crisper staccato notes; smoother images yield longer bell decays
+            const dur = ms.edgeDensity > 0.45 ? '16n' : '8n';
+
+            audioEngine.pluckSynth.triggerAttackRelease(note, dur, undefined, vel);
+            audioEngine.lastPluckTime = now;
+            audioEngine.edgeCooldowns.set(bestEdge.key, now);
+            ms.lastNote = `${note} (${dur}, ω:${bestEdge.omega.toFixed(0)}°/s)`;
+          }
+        }
+      }
+
+      function updateMathPanel(now) {
+        if (!state.mathOpen || now - state.lastMathUpdate < 95) return;
+        state.lastMathUpdate = now;
+
+        const ms = state.mathStats;
+        document.getElementById('mathLambda').textContent = ms.maxLambda.toFixed(1);
+        document.getElementById('mathNodes').textContent = `${trackedPoints.length} / ${state.maxPoints}`;
+        document.getElementById('mathFlow').textContent = `${ms.meanFlow.toFixed(2)} px/f`;
+        document.getElementById('mathMae').textContent = ms.meanMae.toFixed(2);
+        document.getElementById('mathVel').textContent = `${ms.meanV.toFixed(1)} / ${ms.peakV.toFixed(1)} px/s`;
+        document.getElementById('mathAcc').textContent = `${ms.meanA.toFixed(0)} / ${ms.peakA.toFixed(0)} px/s²`;
+        document.getElementById('mathJerk').textContent = `${ms.meanJ.toFixed(0)} px/s³`;
+        document.getElementById('mathDist').textContent = `${ms.meanDist.toFixed(1)} px`;
+        document.getElementById('mathOmega').textContent = `${ms.meanAngle.toFixed(1)}° / ${ms.maxOmega.toFixed(1)}°/s`;
+        document.getElementById('mathCoherence').textContent = ms.coherence.toFixed(3);
+
+        const topEdges = [...activeEdges]
+          .sort((a, b) => Math.abs(b.omega) - Math.abs(a.omega))
+          .slice(0, 3);
+        const tableEl = document.getElementById('mathEdgeTable');
+        if (topEdges.length > 0) {
+          tableEl.textContent = topEdges.map(e =>
+            `${e.a.label}↔${e.b.label}  d:${e.dist.toFixed(0).padStart(3)}  θ:${e.angle.toFixed(0).padStart(4)}°  ω:${e.omega.toFixed(0).padStart(4)}°/s`
+          ).join('\n');
+        } else {
+          tableEl.textContent = 'AWAITING ACTIVE EDGES...';
+        }
+
+        document.getElementById('mathAudioState').textContent = state.audioEnabled ? 'ACTIVE // ADAPTIVE' : 'STANDBY (MUTED)';
+        document.getElementById('mathAudioMode').textContent = ms.modeName;
+        document.getElementById('mathImageLum').textContent = `${ms.luminance.toFixed(2)} / ${ms.contrast.toFixed(2)}`;
+        document.getElementById('mathImageTex').textContent = `${ms.edgeDensity.toFixed(2)} / ${ms.symmetry.toFixed(2)}`;
+        document.getElementById('mathAudioFm').textContent = `${ms.harmonicity.toFixed(2)} / ${ms.modIndex.toFixed(2)}`;
+        document.getElementById('mathAudioNote').textContent = ms.lastNote;
+        document.getElementById('mathAudioCutoff').textContent = `${ms.filterCutoff.toFixed(0)} Hz // ${ms.pan >= 0 ? '+' : ''}${ms.pan.toFixed(2)}`;
+      }
+
+      /* -----------------------------------------------------------------------
+         7. REAL-TIME DENSE GRAPH RECORDER, TELEMETRY SCOPE & MEDIA RECORDER
+         ----------------------------------------------------------------------- */
+      const denseData = {
+        trails: new Map(),
+        stamps: [],
+        edges: [],
+        telemetry: [],
+        totalPoints: 0
+      };
+
+      const SCOPE_HISTORY = 180;
+      const scopeBuffer = [];
+
+      let mediaRecorder = null;
+      let recordedChunks = [];
+      let recordedWebmBlob = null;
+
+      function clearDenseGraph() {
+        denseData.trails.clear();
+        denseData.stamps = [];
+        denseData.edges = [];
+        denseData.telemetry = [];
+        denseData.totalPoints = 0;
+        denseCtx.clearRect(0, 0, denseCanvas.width, denseCanvas.height);
+        document.getElementById('recSamples').textContent = 'GRAPH: 0 PTS';
+        showToast('DENSE GRAPH CLEARED');
+      }
+
+      function drawStampedSquareOnCtx(ctx, s, c) {
+        const hs = s.size * 0.5;
+        const x0 = s.x - hs;
+        const y0 = s.y - hs;
+
+        ctx.strokeStyle = c.ink;
+        ctx.lineWidth = 0.75;
+        ctx.strokeRect(x0, y0, s.size, s.size);
+
+        ctx.fillStyle = c.ink;
+        const h = 3;
+        ctx.fillRect(x0 - 1.5, y0 - 1.5, h, h);
+        ctx.fillRect(x0 + s.size - 1.5, y0 - 1.5, h, h);
+        ctx.fillRect(x0 - 1.5, y0 + s.size - 1.5, h, h);
+        ctx.fillRect(x0 + s.size - 1.5, y0 + s.size - 1.5, h, h);
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = c.bg;
+        ctx.fill();
+        ctx.stroke();
+
+        if (s.anno) {
+          ctx.fillStyle = c.inkDim;
+          ctx.font = '8px "IBM Plex Mono", monospace';
+          ctx.fillText(s.anno, x0 + s.size + 4, y0 + 7);
+        }
+      }
+
+      function redrawDenseCanvas() {
+        const w = state.viewport.w;
+        const h = state.viewport.h;
+        denseCanvas.width = w;
+        denseCanvas.height = h;
+        denseCtx.clearRect(0, 0, w, h);
+
+        const c = getThemeColors();
+
+        denseCtx.strokeStyle = c.inkUltraFaint;
+        denseCtx.lineWidth = 0.65;
+        denseCtx.beginPath();
+        for (let i = 0; i < denseData.edges.length; i++) {
+          const e = denseData.edges[i];
+          denseCtx.moveTo(e.x1, e.y1);
+          denseCtx.lineTo(e.x2, e.y2);
+        }
+        denseCtx.stroke();
+
+        denseCtx.strokeStyle = c.inkDim;
+        denseCtx.lineWidth = 0.85;
+        for (const pts of denseData.trails.values()) {
+          if (pts.length < 2) continue;
+          denseCtx.beginPath();
+          denseCtx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            denseCtx.lineTo(pts[i].x, pts[i].y);
+          }
+          denseCtx.stroke();
+        }
+
+        for (let i = 0; i < denseData.stamps.length; i++) {
+          drawStampedSquareOnCtx(denseCtx, denseData.stamps[i], c);
+        }
+      }
+
+      function recordKinematicsFrame(now) {
+        let sumV = 0, peakV = 0, sumA = 0, peakA = 0, sumJ = 0, sumW = 0, sumX = 0;
+        const n = trackedPoints.length;
+        for (let i = 0; i < n; i++) {
+          const p = trackedPoints[i];
+          sumV += p.speed;
+          if (p.speed > peakV) peakV = p.speed;
+          sumA += p.accel;
+          if (p.accel > peakA) peakA = p.accel;
+          sumJ += p.jerk;
+          sumX += p.x;
+        }
+        const m = activeEdges.length;
+        for (let i = 0; i < m; i++) {
+          sumW += Math.abs(activeEdges[i].omega);
+        }
+
+        const sample = {
+          t: +((now - state.startTime) / 1000).toFixed(3),
+          meanV: n ? sumV / n : 0,
+          peakV,
+          meanA: n ? sumA / n : 0,
+          meanW: m ? sumW / m : 0,
+          meanJ: n ? sumJ / n : 0,
+          nodes: n
+        };
+
+        state.mathStats.meanV = sample.meanV;
+        state.mathStats.peakV = peakV;
+        state.mathStats.meanA = sample.meanA;
+        state.mathStats.peakA = peakA;
+        state.mathStats.meanJ = sample.meanJ;
+        state.mathStats.centroidX = n && state.viewport.w ? (sumX / n) / state.viewport.w : 0.5;
+
+        scopeBuffer.push(sample);
+        if (scopeBuffer.length > SCOPE_HISTORY) scopeBuffer.shift();
+
+        // Update scope numeric readouts
+        if (state.frameCount % 3 === 0) {
+          document.getElementById('scopeV').textContent = sample.meanV.toFixed(1);
+          document.getElementById('scopeA').textContent = sample.meanA.toFixed(0);
+          document.getElementById('scopeW').textContent = sample.meanW.toFixed(1);
+          document.getElementById('scopeJ').textContent = sample.meanJ.toFixed(0);
+        }
+
+        if (!state.isRecording) return;
+
+        const c = getThemeColors();
+        const tRel = +((now - state.recStartTime) / 1000).toFixed(3);
+        denseData.telemetry.push({ ...sample, t: tRel });
+
+        // Accumulate trajectories onto denseCanvas incrementally
+        for (let i = 0; i < n; i++) {
+          const p = trackedPoints[i];
+          let arr = denseData.trails.get(p.id);
+          if (!arr) {
+            arr = [];
+            denseData.trails.set(p.id, arr);
+          }
+          const prev = arr.length > 0 ? arr[arr.length - 1] : null;
+          const nodeRec = { x: p.x, y: p.y, v: p.speed, a: p.accel, t: tRel };
+          arr.push(nodeRec);
+          denseData.totalPoints++;
+
+          if (prev) {
+            denseCtx.strokeStyle = c.inkDim;
+            denseCtx.lineWidth = Math.min(2.0, 0.5 + p.speed * 0.008);
+            denseCtx.beginPath();
+            denseCtx.moveTo(prev.x, prev.y);
+            denseCtx.lineTo(p.x, p.y);
+            denseCtx.stroke();
+          }
+
+          // Stamp little corner-handled square at acceleration peaks or periodic intervals
+          if ((p.accel > 420 && state.frameCount % 8 === 0) || (p.age % 36 === 0 && denseData.stamps.length < 400)) {
+            const stamp = {
+              x: p.x,
+              y: p.y,
+              size: Math.max(10, Math.min(28, 12 + p.speed * 0.05)),
+              anno: p.accel > 480 ? `${p.label} a:${p.accel.toFixed(0)}` : '',
+              v: p.speed,
+              a: p.accel,
+              t: tRel
+            };
+            denseData.stamps.push(stamp);
+            drawStampedSquareOnCtx(denseCtx, stamp, c);
+          }
+        }
+
+        // Accumulate sparse historical edge web every 6th frame
+        if (state.frameCount % 6 === 0 && m > 0) {
+          denseCtx.strokeStyle = c.inkUltraFaint;
+          denseCtx.lineWidth = 0.65;
+          denseCtx.beginPath();
+          for (let i = 0; i < m; i++) {
+            const e = activeEdges[i];
+            denseData.edges.push({
+              x1: e.a.x,
+              y1: e.a.y,
+              x2: e.b.x,
+              y2: e.b.y,
+              dist: e.dist,
+              omega: e.omega,
+              t: tRel
+            });
+            denseCtx.moveTo(e.a.x, e.a.y);
+            denseCtx.lineTo(e.b.x, e.b.y);
+          }
+          denseCtx.stroke();
+        }
+
+        document.getElementById('recSamples').textContent = `GRAPH: ${denseData.totalPoints} PTS`;
+      }
+
+      function toggleRecording() {
+        const btnRec = document.getElementById('btnRec');
+        const btnRecText = document.getElementById('btnRecText');
+        const recStatusLabel = document.getElementById('recStatusLabel');
+        const expWebm = document.getElementById('expWebm');
+
+        if (!state.isRecording) {
+          state.isRecording = true;
+          state.recStartTime = performance.now();
+          btnRec.classList.add('active', 'recording');
+          btnRecText.textContent = 'STOP REC';
+          recStatusLabel.textContent = 'RECORDING...';
+          showToast('RECORDING DENSE KINEMATIC GRAPH + WEBM');
+
+          // Start MediaRecorder on mainCanvas if supported
+          try {
+            if (typeof mainCanvas.captureStream === 'function' && typeof MediaRecorder !== 'undefined') {
+              const stream = mainCanvas.captureStream(30);
+              const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+                ? 'video/webm;codecs=vp9'
+                : 'video/webm';
+              recordedChunks = [];
+              mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+              mediaRecorder.ondataavailable = (ev) => {
+                if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data);
+              };
+              mediaRecorder.onstop = () => {
+                recordedWebmBlob = new Blob(recordedChunks, { type: mime });
+                expWebm.disabled = false;
+              };
+              mediaRecorder.start(250);
+            }
+          } catch (err) {
+            console.warn('MediaRecorder fallback:', err);
+          }
+        } else {
+          state.isRecording = false;
+          btnRec.classList.remove('active', 'recording');
+          btnRecText.textContent = 'REC DENSE GRAPH';
+          recStatusLabel.textContent = 'RECORDED // READY';
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+          }
+          showToast(`RECORDING SAVED // ${denseData.totalPoints} GRAPH SAMPLES`);
+        }
+      }
+
+      /* -----------------------------------------------------------------------
+         8. LOCALIZED ROI PIXEL EFFECTS & SCIENTIFIC ANNOTATIONS RENDERER
+         ----------------------------------------------------------------------- */
+      function renderLocalizedRoiEffect(ctx, pt, boxSize, effectMode, c) {
+        const half = boxSize * 0.5;
+        const vx0 = Math.round(pt.x - half);
+        const vy0 = Math.round(pt.y - half);
+
+        if (effectMode === 'none') return;
+
+        // Map viewport ROI box back to srcCanvas coordinates
+        const r = state.drawRect;
+        const sx = ((vx0 - r.x) / Math.max(1, r.w)) * DEMO_W;
+        const sy = ((vy0 - r.y) / Math.max(1, r.h)) * DEMO_H;
+        const sw = (boxSize / Math.max(1, r.w)) * DEMO_W;
+        const sh = (boxSize / Math.max(1, r.h)) * DEMO_H;
+
+        const sampleRes = Math.max(20, Math.min(72, Math.round(boxSize)));
+        roiScratch.width = sampleRes;
+        roiScratch.height = sampleRes;
+        roiScratchCtx.clearRect(0, 0, sampleRes, sampleRes);
+        roiScratchCtx.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, sampleRes, sampleRes);
+
+        const imgData = roiScratchCtx.getImageData(0, 0, sampleRes, sampleRes);
+        const d = imgData.data;
+        const isColor = state.viewMode === 'color';
+
+        if (effectMode === 'xray') {
+          for (let i = 0; i < d.length; i += 4) {
+            if (isColor) {
+              d[i] = 255 - d[i];
+              d[i + 1] = 255 - d[i + 1];
+              d[i + 2] = 255 - d[i + 2];
+            } else {
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              const inv = 255 - lum;
+              d[i] = inv;
+              d[i + 1] = inv;
+              d[i + 2] = inv;
+            }
+            d[i + 3] = 235;
+          }
+          roiScratchCtx.putImageData(imgData, 0, 0);
+          ctx.drawImage(roiScratch, vx0, vy0, boxSize, boxSize);
+        } else if (effectMode === 'dither') {
+          for (let y = 0; y < sampleRes; y++) {
+            for (let x = 0; x < sampleRes; x++) {
+              const i = (y * sampleRes + x) * 4;
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              const threshold = ((BAYER_4X4[(y & 3) * 4 + (x & 3)] + 0.5) / 16) * 255;
+              const val = lum > threshold ? 242 : 12;
+              d[i] = val;
+              d[i + 1] = val;
+              d[i + 2] = val;
+              d[i + 3] = 240;
+            }
+          }
+          roiScratchCtx.putImageData(imgData, 0, 0);
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(roiScratch, vx0, vy0, boxSize, boxSize);
+          ctx.imageSmoothingEnabled = true;
+        } else if (effectMode === 'mosaic') {
+          const cell = Math.max(4, Math.floor(sampleRes / 8));
+          for (let y = 0; y < sampleRes; y += cell) {
+            for (let x = 0; x < sampleRes; x += cell) {
+              const i = (y * sampleRes + x) * 4;
+              const cr = d[i];
+              const cg = d[i + 1];
+              const cb = d[i + 2];
+              const lum = (0.299 * cr + 0.587 * cg + 0.114 * cb) | 0;
+              for (let cy = y; cy < Math.min(sampleRes, y + cell); cy++) {
+                for (let cx = x; cx < Math.min(sampleRes, x + cell); cx++) {
+                  const j = (cy * sampleRes + cx) * 4;
+                  d[j] = isColor ? cr : lum;
+                  d[j + 1] = isColor ? cg : lum;
+                  d[j + 2] = isColor ? cb : lum;
+                  d[j + 3] = 240;
+                }
+              }
+            }
+          }
+          roiScratchCtx.putImageData(imgData, 0, 0);
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(roiScratch, vx0, vy0, boxSize, boxSize);
+          ctx.imageSmoothingEnabled = true;
+        } else if (effectMode === 'threshold') {
+          for (let i = 0; i < d.length; i += 4) {
+            const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            const v = lum > 118 ? 245 : 10;
+            d[i] = v;
+            d[i + 1] = v;
+            d[i + 2] = v;
+            d[i + 3] = 240;
+          }
+          roiScratchCtx.putImageData(imgData, 0, 0);
+          ctx.drawImage(roiScratch, vx0, vy0, boxSize, boxSize);
+        } else if (effectMode === 'halftone') {
+          ctx.save();
+          ctx.fillStyle = c.bg;
+          ctx.fillRect(vx0, vy0, boxSize, boxSize);
+          ctx.fillStyle = c.ink;
+          const step = Math.max(5, Math.floor(boxSize / 9));
+          for (let py = step * 0.5; py < boxSize; py += step) {
+            for (let px = step * 0.5; px < boxSize; px += step) {
+              const sxIdx = Math.min(sampleRes - 1, Math.floor((px / boxSize) * sampleRes));
+              const syIdx = Math.min(sampleRes - 1, Math.floor((py / boxSize) * sampleRes));
+              const i = (syIdx * sampleRes + sxIdx) * 4;
+              const lum = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+              const rDot = (state.theme === 'paper' ? (1 - lum) : lum) * (step * 0.48);
+              if (rDot > 0.5) {
+                ctx.beginPath();
+                ctx.arc(vx0 + px, vy0 + py, rDot, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
+          ctx.restore();
+        }
+      }
+
+      function renderGraphOverlay(ctx, c) {
+        const w = state.viewport.w;
+        const h = state.viewport.h;
+
+        // 1. Short live motion tails
+        ctx.strokeStyle = c.inkFaint;
+        ctx.lineWidth = 0.9;
+        for (let i = 0; i < trackedPoints.length; i++) {
+          const tr = trackedPoints[i].trail;
+          if (tr.length < 2) continue;
+          ctx.beginPath();
+          ctx.moveTo(tr[0].x, tr[0].y);
+          for (let j = 1; j < tr.length; j++) {
+            ctx.lineTo(tr[j].x, tr[j].y);
+          }
+          ctx.stroke();
+        }
+
+        // 2. Angular proximity edges & midpoint derivative labels
+        for (let i = 0; i < activeEdges.length; i++) {
+          const e = activeEdges[i];
+          const omegaIntensity = Math.min(1, Math.abs(e.omega) / 140);
+          ctx.strokeStyle = omegaIntensity > 0.45 ? c.ink : c.inkDim;
+          ctx.lineWidth = 0.75 + omegaIntensity * 1.1;
+
+          ctx.beginPath();
+          ctx.moveTo(e.a.x, e.a.y);
+          ctx.lineTo(e.b.x, e.b.y);
+          ctx.stroke();
+
+          // Draw subtle angle arc at node A for high-angular-velocity edges
+          if (state.annoDensity !== 'minimal' && Math.abs(e.omega) > 22) {
+            const rad = (e.angle * Math.PI) / 180;
+            ctx.strokeStyle = c.inkFaint;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.arc(e.a.x, e.a.y, 16, 0, rad, rad < 0);
+            ctx.stroke();
+          }
+
+          // Edge telemetry annotation at midpoint
+          if (state.annoDensity === 'full' || (state.annoDensity === 'compact' && i % 2 === 0)) {
+            const mx = (e.a.x + e.b.x) * 0.5;
+            const my = (e.a.y + e.b.y) * 0.5;
+            const label = state.annoDensity === 'full'
+              ? `θ:${e.angle.toFixed(0)}° ω:${e.omega.toFixed(0)}°/s d:${e.dist.toFixed(0)}`
+              : `${e.angle.toFixed(0)}° // ${e.omega.toFixed(0)}°/s`;
+
+            ctx.font = '8.5px "IBM Plex Mono", monospace';
+            const tw = ctx.measureText(label).width;
+            ctx.fillStyle = c.labelBg;
+            ctx.fillRect(mx - tw * 0.5 - 3, my - 6, tw + 6, 11);
+            ctx.fillStyle = c.inkDim;
+            ctx.fillText(label, mx - tw * 0.5, my + 2.5);
+          }
+        }
+
+        // 3. Corner-handled ROI squares, localized pixel effects, velocity vectors & labels
+        for (let i = 0; i < trackedPoints.length; i++) {
+          const pt = trackedPoints[i];
+          const dynScale = Math.min(1.45, 0.72 + pt.speed * 0.0025);
+          const boxSize = Math.round(state.roiSize * dynScale);
+          const half = boxSize * 0.5;
+          const x0 = pt.x - half;
+          const y0 = pt.y - half;
+
+          const eff = state.roiEffect === 'mixed' ? pt.effectType : state.roiEffect;
+          if (state.viewMode !== 'dense') {
+            renderLocalizedRoiEffect(ctx, pt, boxSize, eff, c);
+          }
+
+          // Crisp 1px bounding square
+          ctx.strokeStyle = c.ink;
+          ctx.lineWidth = pt.pinned ? 1.5 : 0.9;
+          ctx.strokeRect(x0, y0, boxSize, boxSize);
+
+          // 4 tiny solid corner handles (4x4px)
+          ctx.fillStyle = c.ink;
+          const hs = 4;
+          ctx.fillRect(x0 - 2, y0 - 2, hs, hs);
+          ctx.fillRect(x0 + boxSize - 2, y0 - 2, hs, hs);
+          ctx.fillRect(x0 - 2, y0 + boxSize - 2, hs, hs);
+          ctx.fillRect(x0 + boxSize - 2, y0 + boxSize - 2, hs, hs);
+
+          // Center hollow anchor + velocity vector arrow
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = c.bg;
+          ctx.fill();
+          ctx.strokeStyle = c.ink;
+          ctx.lineWidth = 0.9;
+          ctx.stroke();
+
+          if (pt.speed > 10) {
+            const vxEnd = pt.x + pt.vx * 0.14;
+            const vyEnd = pt.y + pt.vy * 0.14;
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y);
+            ctx.lineTo(vxEnd, vyEnd);
+            ctx.strokeStyle = c.ink;
+            ctx.lineWidth = 0.9;
+            ctx.stroke();
+          }
+
+          // Node annotation callout
+          if (state.annoDensity !== 'minimal') {
+            ctx.font = '8.5px "IBM Plex Mono", monospace';
+            const topTag = `${pt.label}${pt.pinned ? '*' : ''} .${ROI_LABELS[eff] || 'RAW'}`;
+            ctx.fillStyle = c.labelBg;
+            const tw1 = ctx.measureText(topTag).width;
+            ctx.fillRect(x0, y0 - 13, tw1 + 6, 11);
+            ctx.fillStyle = c.ink;
+            ctx.fillText(topTag, x0 + 3, y0 - 4.5);
+
+            if (state.annoDensity === 'full') {
+              const botTag = `v:${pt.speed.toFixed(0)} a:${pt.accel.toFixed(0)} (${pt.x.toFixed(0)},${pt.y.toFixed(0)})`;
+              const tw2 = ctx.measureText(botTag).width;
+              ctx.fillStyle = c.labelBg;
+              ctx.fillRect(x0, y0 + boxSize + 3, tw2 + 6, 11);
+              ctx.fillStyle = c.inkDim;
+              ctx.fillText(botTag, x0 + 3, y0 + boxSize + 11.5);
+            }
+          }
+        }
+
+        // 4. [FIG.01] Architectural Leader Lines to top-3 highest-acceleration nodes
+        if (state.showLeaders && trackedPoints.length > 0) {
+          const anchorX = w - 28;
+          const anchorY = 76;
+          const topAccel = [...trackedPoints]
+            .sort((a, b) => b.accel - a.accel)
+            .slice(0, 3);
+
+          ctx.strokeStyle = c.inkFaint;
+          ctx.lineWidth = 0.75;
+          for (let i = 0; i < topAccel.length; i++) {
+            const p = topAccel[i];
+            ctx.beginPath();
+            ctx.moveTo(anchorX, anchorY);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = c.ink;
+          ctx.font = '10px "IBM Plex Mono", monospace';
+          ctx.fillText('[FIG.01]', anchorX - 46, anchorY - 6);
+        }
+      }
+
+      /* -----------------------------------------------------------------------
+         9. BOTTOM DERIVATIVE OSCILLOSCOPE RENDERER
+         ----------------------------------------------------------------------- */
+      function renderOscilloscope() {
+        const w = scopeCanvas.clientWidth;
+        const h = scopeCanvas.clientHeight;
+        if (w <= 0 || h <= 0) return;
+
+        const c = getThemeColors();
+        scopeCtx.clearRect(0, 0, w, h);
+
+        // Center hairline reference
+        scopeCtx.strokeStyle = c.inkUltraFaint;
+        scopeCtx.lineWidth = 1;
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(0, h * 0.5);
+        scopeCtx.lineTo(w, h * 0.5);
+        scopeCtx.stroke();
+
+        const len = scopeBuffer.length;
+        if (len < 2) return;
+
+        const drawTrace = (accessor, maxVal, strokeStyle, lineWidth) => {
+          scopeCtx.strokeStyle = strokeStyle;
+          scopeCtx.lineWidth = lineWidth;
+          scopeCtx.beginPath();
+          for (let i = 0; i < len; i++) {
+            const x = (i / (SCOPE_HISTORY - 1)) * w;
+            const norm = Math.min(1, accessor(scopeBuffer[i]) / maxVal);
+            const y = h - 4 - norm * (h - 8);
+            if (i === 0) scopeCtx.moveTo(x, y);
+            else scopeCtx.lineTo(x, y);
+          }
+          scopeCtx.stroke();
+        };
+
+        drawTrace(s => s.meanJ, 2400, c.inkFaint, 0.8);
+        drawTrace(s => s.meanW, 140, c.inkDim, 1.0);
+        drawTrace(s => s.meanV, 180, c.ink, 1.3);
+      }
+
+      /* -----------------------------------------------------------------------
+         10. MAIN REAL-TIME ANIMATION LOOP
+         ----------------------------------------------------------------------- */
+      function tick(now) {
+        requestAnimationFrame(tick);
+
+        const dt = (now - state.lastFrameTime) / 1000;
+        state.lastFrameTime = now;
+        state.frameCount++;
+
+        // FPS telemetry
+        if (now - state.lastFpsTime >= 400) {
+          state.fps = Math.round((state.frameCount * 1000) / Math.max(1, now - state.lastFpsTime));
+          state.lastFpsTime = now;
+          state.frameCount = 0;
+          document.getElementById('statFps').textContent = String(state.fps);
+        }
+
+        const tSec = (now - state.startTime) / 1000;
+        document.getElementById('statTime').textContent = formatClock(now - state.startTime);
+
+        // 1. Acquire active source frame
+        let sourceEl = demoCanvas;
+        let sw = DEMO_W;
+        let sh = DEMO_H;
+        let mirror = false;
+
+        if (state.source === 'demoA') {
+          renderDemoSpecimenA(tSec);
+        } else if (state.source === 'demoB') {
+          renderDemoSpecimenB(tSec, dt);
+        } else if ((state.source === 'upload' || state.source === 'webcam') && videoEl.readyState >= 2) {
+          sourceEl = videoEl;
+          sw = videoEl.videoWidth || DEMO_W;
+          sh = videoEl.videoHeight || DEMO_H;
+          mirror = state.source === 'webcam' && state.mirrorWebcam;
+
+          if (state.source === 'upload' && videoEl.duration > 0) {
+            const scrubber = document.getElementById('videoScrubber');
+            scrubber.value = Math.round((videoEl.currentTime / videoEl.duration) * 1000);
+            document.getElementById('videoTimeLabel').textContent =
+              `${formatClock(videoEl.currentTime * 1000)} / ${formatClock(videoEl.duration * 1000)}`;
+          }
+        } else {
+          // Fallback to demoA while video/webcam initializes
+          renderDemoSpecimenA(tSec);
+        }
+
+        computeDrawRect(sw, sh);
+
+        // 2. Run Computer Vision Tracking, Kinematics, Audio Score & Math Inspector
+        extractGrayscaleFromSource(sourceEl, sw, sh, mirror);
+        updateTrackingAndKinematics(dt, now);
+        recordKinematicsFrame(now);
+        updateAudioScore(now);
+        updateMathPanel(now);
+
+        document.getElementById('statNodes').textContent = String(trackedPoints.length).padStart(2, '0');
+
+        // 3. Render Main Viewport Canvas
+        const c = getThemeColors();
+        const vw = state.viewport.w;
+        const vh = state.viewport.h;
+        mainCtx.fillStyle = c.bg;
+        mainCtx.fillRect(0, 0, vw, vh);
+
+        // Draw source video (monochrome in LIVE/HYBRID, full-color in COLOR mode)
+        if (state.viewMode === 'live' || state.viewMode === 'color' || state.viewMode === 'hybrid') {
+          const r = state.drawRect;
+          mainCtx.save();
+          if (state.viewMode === 'hybrid') mainCtx.globalAlpha = 0.55;
+          mainCtx.filter = state.viewMode === 'color'
+            ? 'contrast(104%) saturate(108%)'
+            : 'grayscale(100%) contrast(108%)';
+          if (mirror) {
+            mainCtx.translate(r.x + r.w, r.y);
+            mainCtx.scale(-1, 1);
+            mainCtx.drawImage(sourceEl, 0, 0, sw, sh, 0, 0, r.w, r.h);
+          } else {
+            mainCtx.drawImage(sourceEl, 0, 0, sw, sh, r.x, r.y, r.w, r.h);
+          }
+          mainCtx.restore();
+        }
+
+        // Draw accumulated dense graph layer (in HYBRID or DENSE GRAPH mode)
+        if (state.viewMode === 'hybrid' || state.viewMode === 'dense') {
+          mainCtx.drawImage(denseCanvas, 0, 0, vw, vh);
+        }
+
+        // Draw live tracked keypoints, ROI squares, angular edges & annotations
+        if (state.viewMode === 'live' || state.viewMode === 'color' || state.viewMode === 'hybrid' || denseData.totalPoints === 0) {
+          renderGraphOverlay(mainCtx, c);
+        }
+
+        // 4. Render Bottom Oscilloscope
+        renderOscilloscope();
+      }
+
+      /* -----------------------------------------------------------------------
+         11. INPUT SOURCE SWITCHING (DEMO A/B, VIDEO UPLOAD, WEBCAM)
+         ----------------------------------------------------------------------- */
+      function stopWebcam() {
+        if (state.webcamStream) {
+          state.webcamStream.getTracks().forEach(t => t.stop());
+          state.webcamStream = null;
+        }
+      }
+
+      function setSourceButtonActive(src) {
+        document.querySelectorAll('[data-source]').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.source === src);
+        });
+        document.getElementById('videoBar').classList.toggle('hidden', src !== 'upload');
+        document.getElementById('toggleMirror').classList.toggle('hidden', src !== 'webcam');
+      }
+
+      async function switchSource(src) {
+        if (src === 'upload') {
+          fileInput.click();
+          return;
+        }
+
+        stopWebcam();
+        videoEl.pause();
+        videoEl.srcObject = null;
+
+        if (src === 'webcam') {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+              audio: false
+            });
+            state.webcamStream = stream;
+            videoEl.srcObject = stream;
+            await videoEl.play();
+            state.source = 'webcam';
+            setSourceButtonActive('webcam');
+            resetTracking();
+            showToast('LIVE WEBCAM FEED ACTIVE');
+          } catch (err) {
+            console.warn('Webcam error:', err);
+            showToast('WEBCAM PERMISSION DENIED OR UNAVAILABLE', 3000);
+          }
+          return;
+        }
+
+        state.source = src;
+        setSourceButtonActive(src);
+        resetTracking();
+        showToast(`SOURCE // ${src === 'demoA' ? 'DEMO_A MOTH SPECIMEN' : 'DEMO_B ORBITAL PENDULUM'}`);
+      }
+
+      function loadVideoFile(file) {
+        if (!file || !file.type.startsWith('video/')) {
+          showToast('PLEASE SELECT A VALID VIDEO FILE (MP4/WEBM/MOV)', 3000);
+          return;
+        }
+        stopWebcam();
+        if (state.videoObjectUrl) URL.revokeObjectURL(state.videoObjectUrl);
+        state.videoObjectUrl = URL.createObjectURL(file);
+        videoEl.srcObject = null;
+        videoEl.src = state.videoObjectUrl;
+        videoEl.play().then(() => {
+          state.source = 'upload';
+          setSourceButtonActive('upload');
+          document.getElementById('btnPlayPause').textContent = 'PAUSE';
+          resetTracking();
+          showToast(`LOADED // ${file.name.toUpperCase()}`);
+        }).catch(err => {
+          console.warn('Video playback error:', err);
+          showToast('UNABLE TO PLAY VIDEO FILE', 3000);
+        });
+      }
+
+      /* -----------------------------------------------------------------------
+         12. EXPORT HANDLERS (PNG, SVG, WEBM, JSON)
+         ----------------------------------------------------------------------- */
+      function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function exportPNG() {
+        mainCanvas.toBlob((blob) => {
+          if (blob) {
+            triggerDownload(blob, `differential_flow_${Date.now()}.png`);
+            showToast('EXPORTED PNG SNAPSHOT');
+          }
+        }, 'image/png');
+      }
+
+      function exportSVG() {
+        const w = state.viewport.w;
+        const h = state.viewport.h;
+        const c = getThemeColors();
+        const parts = [
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
+          `<rect width="100%" height="100%" fill="${c.bg}"/>`
+        ];
+
+        // Recorded edge web
+        for (const e of denseData.edges) {
+          parts.push(`<line x1="${e.x1.toFixed(1)}" y1="${e.y1.toFixed(1)}" x2="${e.x2.toFixed(1)}" y2="${e.y2.toFixed(1)}" stroke="${c.ink}" stroke-opacity="0.14" stroke-width="0.65"/>`);
+        }
+        // Recorded trails
+        for (const pts of denseData.trails.values()) {
+          if (pts.length < 2) continue;
+          const d = pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+          parts.push(`<path d="${d}" fill="none" stroke="${c.ink}" stroke-opacity="0.65" stroke-width="0.9"/>`);
+        }
+        // Live edges
+        for (const e of activeEdges) {
+          parts.push(`<line x1="${e.a.x.toFixed(1)}" y1="${e.a.y.toFixed(1)}" x2="${e.b.x.toFixed(1)}" y2="${e.b.y.toFixed(1)}" stroke="${c.ink}" stroke-opacity="0.8" stroke-width="1"/>`);
+        }
+        // Stamped squares
+        for (const s of denseData.stamps) {
+          const x0 = (s.x - s.size * 0.5).toFixed(1);
+          const y0 = (s.y - s.size * 0.5).toFixed(1);
+          parts.push(`<rect x="${x0}" y="${y0}" width="${s.size.toFixed(1)}" height="${s.size.toFixed(1)}" fill="none" stroke="${c.ink}" stroke-width="0.8"/>`);
+        }
+        parts.push('</svg>');
+
+        const blob = new Blob([parts.join('\n')], { type: 'image/svg+xml;charset=utf-8' });
+        triggerDownload(blob, `differential_flow_graph_${Date.now()}.svg`);
+        showToast('EXPORTED VECTOR SVG GRAPH');
+      }
+
+      function exportJSON() {
+        const payload = {
+          system: 'DIFFERENTIAL_FLOW // ∂θ/∂t',
+          exportedAt: new Date().toISOString(),
+          source: state.source,
+          viewMode: state.viewMode,
+          theme: state.theme,
+          mathStats: state.mathStats,
+          telemetry: denseData.telemetry,
+          stamps: denseData.stamps,
+          trails: Array.from(denseData.trails.entries()).map(([id, points]) => ({ id, points }))
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        triggerDownload(blob, `differential_flow_telemetry_${Date.now()}.json`);
+        showToast('EXPORTED KINEMATIC TELEMETRY JSON');
+      }
+
+      /* -----------------------------------------------------------------------
+         13. EVENT LISTENERS & INTERACTION BINDINGS
+         ----------------------------------------------------------------------- */
+      // Source selector buttons
+      document.querySelectorAll('[data-source]').forEach(btn => {
+        btn.addEventListener('click', () => switchSource(btn.dataset.source));
+      });
+
+      // View mode buttons
+      document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.viewMode = btn.dataset.view;
+          document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b === btn));
+          showToast(`VIEW // ${state.viewMode.toUpperCase()}`);
+        });
+      });
+
+      // Theme toggle (DARK <-> LIGHT)
+      const themeToggleBtn = document.getElementById('themeToggle');
+      themeToggleBtn.addEventListener('click', () => {
+        state.theme = state.theme === 'darkroom' ? 'paper' : 'darkroom';
+        document.documentElement.setAttribute('data-theme', state.theme);
+        themeToggleBtn.textContent = state.theme === 'darkroom' ? 'LIGHT' : 'DARK';
+        redrawDenseCanvas();
+        showToast(`THEME // ${state.theme === 'darkroom' ? 'DARK MODE' : 'LIGHT MODE'}`);
+      });
+
+      // Bottom Dock Minimize/Expand Toggle (starts minimized by default)
+      const btnToggleBottomDock = document.getElementById('btnToggleBottomDock');
+      const bottomDockContent = document.getElementById('bottomDockContent');
+      btnToggleBottomDock.addEventListener('click', () => {
+        const isHidden = bottomDockContent.classList.toggle('hidden');
+        btnToggleBottomDock.classList.toggle('active', !isHidden);
+        btnToggleBottomDock.textContent = isHidden ? 'HUD [+]' : 'HUD [-]';
+        btnToggleBottomDock.setAttribute('aria-expanded', String(!isHidden));
+        if (!isHidden) {
+          requestAnimationFrame(resizeScopeCanvas);
+        }
+      });
+
+      // Audio score toggle
+      document.getElementById('btnAudio').addEventListener('click', toggleAudioScore);
+
+      // Expandable real-time Math Inspector drawer toggle
+      const btnMathDrawer = document.getElementById('btnMathDrawer');
+      const mathDrawer = document.getElementById('mathDrawer');
+      function setMathDrawerOpen(open) {
+        state.mathOpen = open;
+        mathDrawer.classList.toggle('hidden', !open);
+        btnMathDrawer.classList.toggle('active', open);
+        btnMathDrawer.textContent = open ? 'MATH [-]' : 'MATH [+]';
+        btnMathDrawer.setAttribute('aria-expanded', String(open));
+      }
+      btnMathDrawer.addEventListener('click', () => setMathDrawerOpen(!state.mathOpen));
+      document.getElementById('btnCloseMath').addEventListener('click', () => setMathDrawerOpen(false));
+
+      // Recording & Clear buttons
+      document.getElementById('btnRec').addEventListener('click', toggleRecording);
+      document.getElementById('btnClearGraph').addEventListener('click', clearDenseGraph);
+      document.getElementById('btnClearPins').addEventListener('click', () => {
+        trackedPoints = trackedPoints.filter(p => !p.pinned);
+        showToast('MANUAL PINS CLEARED');
+      });
+
+      // Exports
+      document.getElementById('expPng').addEventListener('click', exportPNG);
+      document.getElementById('expSvg').addEventListener('click', exportSVG);
+      document.getElementById('expJson').addEventListener('click', exportJSON);
+      document.getElementById('expWebm').addEventListener('click', () => {
+        if (recordedWebmBlob) {
+          triggerDownload(recordedWebmBlob, `differential_flow_${Date.now()}.webm`);
+          showToast('EXPORTED WEBM RECORDING');
+        }
+      });
+
+      // Parameter Drawer toggle
+      const btnToggleDrawer = document.getElementById('btnToggleDrawer');
+      const paramDrawer = document.getElementById('paramDrawer');
+      btnToggleDrawer.addEventListener('click', () => {
+        const isHidden = paramDrawer.classList.toggle('hidden');
+        btnToggleDrawer.classList.toggle('active', !isHidden);
+        btnToggleDrawer.textContent = isHidden ? 'PARAMS [+]' : 'PARAMS [-]';
+        btnToggleDrawer.setAttribute('aria-expanded', String(!isHidden));
+      });
+
+      // Parameter Controls
+      document.getElementById('roiEffectSelect').addEventListener('change', (e) => {
+        state.roiEffect = e.target.value;
+      });
+
+      document.querySelectorAll('.anno-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.annoDensity = btn.dataset.anno;
+          document.querySelectorAll('.anno-btn').forEach(b => b.classList.toggle('active', b === btn));
+        });
+      });
+
+      document.getElementById('sliderMaxPts').addEventListener('input', (e) => {
+        state.maxPoints = Number(e.target.value);
+        document.getElementById('valMaxPts').textContent = String(state.maxPoints);
+        if (trackedPoints.length > state.maxPoints) {
+          trackedPoints = trackedPoints.slice(0, state.maxPoints);
+        }
+      });
+
+      document.getElementById('sliderEdgeDist').addEventListener('input', (e) => {
+        state.edgeThreshold = Number(e.target.value);
+        document.getElementById('valEdgeDist').textContent = `${state.edgeThreshold}PX`;
+      });
+
+      document.getElementById('sliderRoiSize').addEventListener('input', (e) => {
+        state.roiSize = Number(e.target.value);
+        document.getElementById('valRoiSize').textContent = `${state.roiSize}PX`;
+      });
+
+      const toggleLeadersBtn = document.getElementById('toggleLeaders');
+      toggleLeadersBtn.addEventListener('click', () => {
+        state.showLeaders = !state.showLeaders;
+        toggleLeadersBtn.classList.toggle('active', state.showLeaders);
+        toggleLeadersBtn.textContent = state.showLeaders ? 'LEADERS: ON' : 'LEADERS: OFF';
+      });
+
+      const toggleMirrorBtn = document.getElementById('toggleMirror');
+      toggleMirrorBtn.addEventListener('click', () => {
+        state.mirrorWebcam = !state.mirrorWebcam;
+        toggleMirrorBtn.classList.toggle('active', state.mirrorWebcam);
+        toggleMirrorBtn.textContent = state.mirrorWebcam ? 'MIRROR: ON' : 'MIRROR: OFF';
+      });
+
+      // Video file input & playback controls
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) loadVideoFile(e.target.files[0]);
+        e.target.value = '';
+      });
+
+      document.getElementById('btnPlayPause').addEventListener('click', () => {
+        if (videoEl.paused) {
+          videoEl.play();
+          document.getElementById('btnPlayPause').textContent = 'PAUSE';
+        } else {
+          videoEl.pause();
+          document.getElementById('btnPlayPause').textContent = 'PLAY';
+        }
+      });
+
+      document.getElementById('videoScrubber').addEventListener('input', (e) => {
+        if (videoEl.duration > 0) {
+          videoEl.currentTime = (Number(e.target.value) / 1000) * videoEl.duration;
+        }
+      });
+
+      // Drag and drop video files anywhere on viewport
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropOverlay.classList.add('visible');
+      });
+      window.addEventListener('dragleave', (e) => {
+        if (e.relatedTarget === null) dropOverlay.classList.remove('visible');
+      });
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropOverlay.classList.remove('visible');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadVideoFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Click / tap on canvas to pin a manual keypoint
+      mainCanvas.addEventListener('pointerdown', (e) => {
+        const rect = mainCanvas.getBoundingClientRect();
+        const vx = e.clientX - rect.left;
+        const vy = e.clientY - rect.top;
+        const { cx, cy } = viewportToCv(vx, vy);
+
+        if (cx < 6 || cy < 6 || cx >= CV_W - 6 || cy >= CV_H - 6) return;
+
+        const id = nextPointId++;
+        trackedPoints.push({
+          id,
+          label: `PIN_${String(id).padStart(2, '0')}`,
+          cx,
+          cy,
+          x: vx,
+          y: vy,
+          vx: 0,
+          vy: 0,
+          speed: 0,
+          ax: 0,
+          ay: 0,
+          accel: 0,
+          jerk: 0,
+          prevAccel: 0,
+          age: 1,
+          pinned: true,
+          effectType: ROI_EFFECT_CYCLE[id % ROI_EFFECT_CYCLE.length],
+          lastFlowMag: 0,
+          lastMae: 0,
+          trail: [{ x: vx, y: vy }]
+        });
+        showToast(`PINNED KEYPOINT PIN_${String(id).padStart(2, '0')}`);
+      });
+
+      window.addEventListener('resize', resizeViewports);
+
+      /* -----------------------------------------------------------------------
+         14. BOOTSTRAP ON LOAD
+         ----------------------------------------------------------------------- */
+      window.addEventListener('load', () => {
+        generateGrainTexture();
+        resizeViewports();
+        showToast('READY // CLICK CANVAS TO PIN KEYPOINT', 2600);
+        requestAnimationFrame(tick);
+      });
+    })();
+  </script>
+</body>
+</html>
